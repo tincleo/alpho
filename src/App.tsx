@@ -1,5 +1,5 @@
 import React from 'react';
-import { addWeeks, addMonths, subWeeks, subMonths, startOfWeek, startOfMonth, addHours } from 'date-fns';
+import { addWeeks, addMonths, subWeeks, subMonths, startOfWeek, startOfMonth } from 'date-fns';
 import { CalendarHeader } from './components/Calendar/CalendarHeader';
 import { CalendarGrid } from './components/Calendar/CalendarGrid';
 import { AgendaView } from './components/Calendar/AgendaView';

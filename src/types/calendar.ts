@@ -7,6 +7,13 @@ export type Location =
 
 export type Size = 'small' | 'medium' | 'large';
 
+export type ViewMode = 'month' | 'week' | 'agenda';
+
+interface CarpetDetails {
+  size: Size;
+  quantity: number;
+}
+
 export interface ServiceDetails {
   couch?: {
     type: 'leather' | 'tissue';
@@ -14,12 +21,14 @@ export interface ServiceDetails {
   };
   carpet?: {
     size: Size;
+    quantity: number;
   };
   'car-seats'?: {
     seats: number;
   };
   mattress?: {
     size: Size;
+    quantity: number;
   };
 }
 
