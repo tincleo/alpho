@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, UserCheck } from 'lucide-react';
+import { X, Calendar, UserCheck, ChevronDown, Plus } from 'lucide-react';
 import { format, setHours, setMinutes, parse, addHours } from 'date-fns';
 import { Booking, ServiceType, ServiceDetails, Location, Priority } from '../../types/calendar';
 import { ServiceTypeSelector } from './ServiceTypeSelector';
@@ -55,16 +55,16 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
     location: initialBooking?.location ?? 'Bastos',
     address: initialBooking?.address ?? '',
     phone: initialBooking?.phone ?? '',
-    date: initialBooking
+    date: initialBooking?.datetime
       ? format(new Date(initialBooking.datetime), 'yyyy-MM-dd')
       : selectedDate 
         ? format(selectedDate, 'yyyy-MM-dd')
         : format(new Date(), 'yyyy-MM-dd'),
-    startTime: initialBooking?.isAllDay ? '09:00' : initialBooking
+    startTime: initialBooking?.datetime
       ? format(new Date(initialBooking.datetime), 'HH:mm')
       : '09:00',
-    endTime: initialBooking?.isAllDay ? '11:00' : initialBooking
-      ? format(new Date(initialBooking.endTime || ''), 'HH:mm')
+    endTime: initialBooking?.endTime
+      ? format(new Date(initialBooking.endTime), 'HH:mm')
       : '11:00',
     notes: initialBooking?.notes ?? '',
     status: initialBooking?.status ?? 'pending',
@@ -73,6 +73,15 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
     name: initialBooking?.name ?? '',
   });
   const [prospectType, setProspectType] = React.useState<'booking' | 'follow-up'>(initialType ?? 'follow-up');
+  const [showNotes, setShowNotes] = React.useState(!!initialBooking?.notes);
+  const [locationSearch, setLocationSearch] = React.useState('');
+  const [showLocationDropdown, setShowLocationDropdown] = React.useState(false);
+
+  const filteredLocations = React.useMemo(() => {
+    return LOCATIONS.filter(location => 
+      location.toLowerCase().includes(locationSearch.toLowerCase())
+    );
+  }, [locationSearch]);
 
   const handleServiceToggle = (type: ServiceType) => {
     setSelectedServices(prev => {
@@ -153,14 +162,16 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
       notes: formData.notes,
       status: formData.status,
       isAllDay: formData.isAllDay,
+      priority: formData.priority,
+      name: formData.name,
     });
     onClose();
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
+      <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 rounded-t-xl">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold">
               {initialBooking ? 'Edit Prospect' : 'New Prospect'}
@@ -174,229 +185,293 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
           </div>
         </div>
 
-        <div className="p-4 overflow-y-auto flex-1">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setProspectType('booking')}
-                className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-all ${
-                  prospectType === 'booking'
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                <Calendar className="w-4 h-4" />
-                <span className="font-medium">Booking</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setProspectType('follow-up')}
-                className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-all ${
-                  prospectType === 'follow-up'
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                <UserCheck className="w-4 h-4" />
-                <span className="font-medium">Follow-up</span>
-              </button>
-            </div>
+        <div className="flex-1 overflow-y-auto">
+          <form onSubmit={handleSubmit} className="p-4">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setProspectType('booking')}
+                  className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-all ${
+                    prospectType === 'booking'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span className="font-medium">Booking</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProspectType('follow-up')}
+                  className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-all ${
+                    prospectType === 'follow-up'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <UserCheck className="w-4 h-4" />
+                  <span className="font-medium">Follow-up</span>
+                </button>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Services <span className="text-red-500">*</span>
-              </label>
-              <ServiceTypeSelector
-                selectedServices={selectedServices}
-                serviceDetails={serviceDetails}
-                onToggleService={handleServiceToggle}
-                onUpdateDetails={handleServiceDetailsUpdate}
-                detailsOptional={prospectType === 'follow-up'}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Prospect Name
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Services <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                  placeholder="Customer name"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                <ServiceTypeSelector
+                  selectedServices={selectedServices}
+                  serviceDetails={serviceDetails}
+                  onToggleService={handleServiceToggle}
+                  onUpdateDetails={handleServiceDetailsUpdate}
+                  detailsOptional={prospectType === 'follow-up'}
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={formData.phone}
-                  onChange={(e) => {
-                    const formatted = formatPhoneNumber(e.target.value);
-                    setFormData((prev) => ({ ...prev, phone: formatted }));
-                  }}
-                  placeholder="699 88 77 66"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      status: e.target.value as Booking['status'],
-                    }))
-                  }
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="pending">Pending</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Priority
-                </label>
-                <select
-                  value={formData.priority}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      priority: e.target.value as Priority,
-                    }))
-                  }
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {PRIORITIES.map((priority) => (
-                    <option key={priority} value={priority}>
-                      {priority.charAt(0).toUpperCase() + priority.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {prospectType === 'booking' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-700">
-                    Booking date <span className="text-red-500">*</span>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Prospect Name
                   </label>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.isAllDay}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          isAllDay: e.target.checked,
-                        }))
-                      }
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                    <span className="ml-2 text-sm text-gray-600">All day</span>
-                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, name: e.target.value }))
+                    }
+                    placeholder="Customer name"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <input
-                      type="date"
-                      required={prospectType === 'booking'}
-                      value={formData.date}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, date: e.target.value }))
-                      }
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={formData.phone}
+                    onChange={(e) => {
+                      const formatted = formatPhoneNumber(e.target.value);
+                      setFormData((prev) => ({ ...prev, phone: formatted }));
+                    }}
+                    placeholder="699 88 77 66"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        status: e.target.value as Booking['status'],
+                      }))
+                    }
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Priority
+                  </label>
+                  <select
+                    value={formData.priority}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        priority: e.target.value as Priority,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {PRIORITIES.map((priority) => (
+                      <option key={priority} value={priority}>
+                        {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {prospectType === 'booking' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-700">
+                      Booking date <span className="text-red-500">*</span>
+                    </label>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.isAllDay}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            isAllDay: e.target.checked,
+                          }))
+                        }
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                      <span className="ml-2 text-sm text-gray-600">All day</span>
+                    </label>
                   </div>
 
-                  {!formData.isAllDay && (
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <select
-                        required
-                        value={formData.startTime}
-                        onChange={(e) => handleStartTimeChange(e.target.value)}
+                      <input
+                        type="date"
+                        required={prospectType === 'booking'}
+                        value={formData.date}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, date: e.target.value }))
+                        }
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        {TIME_OPTIONS.map((time) => (
-                          <option key={time} value={time}>
-                            {time}
-                          </option>
-                        ))}
-                      </select>
+                      />
+                    </div>
+
+                    {!formData.isAllDay && (
+                      <div>
+                        <select
+                          required
+                          value={formData.startTime}
+                          onChange={(e) => handleStartTimeChange(e.target.value)}
+                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          {TIME_OPTIONS.map((time) => (
+                            <option key={time} value={time}>
+                              {time}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Location
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={locationSearch}
+                      onChange={(e) => {
+                        setLocationSearch(e.target.value);
+                        setShowLocationDropdown(true);
+                      }}
+                      onFocus={() => setShowLocationDropdown(true)}
+                      placeholder="Search location..."
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLocationDropdown(!showLocationDropdown)}
+                      className="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {showLocationDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {filteredLocations.map((location) => (
+                        <button
+                          key={location}
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, location }));
+                            setLocationSearch(location);
+                            setShowLocationDropdown(false);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
+                        >
+                          {location}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Address
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, address: e.target.value }))
+                    }
+                    placeholder="Enter precise address"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
               </div>
-            )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Address
-              </label>
-              <input
-                type="text"
-                value={formData.address}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, address: e.target.value }))
-                }
-                placeholder="Enter precise address"
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Notes
-              </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, notes: e.target.value }))
-                }
-                rows={3}
-                placeholder="Additional notes about the prospect"
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-              >
-                Save
-              </button>
+              <div>
+                {!showNotes ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowNotes(true)}
+                    className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add note
+                  </button>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Notes
+                    </label>
+                    <textarea
+                      value={formData.notes}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, notes: e.target.value }))
+                      }
+                      rows={3}
+                      placeholder="Additional notes about the prospect"
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </form>
+        </div>
+
+        <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 rounded-b-xl">
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="prospect-form"
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+            >
+              Save
+            </button>
+          </div>
         </div>
       </div>
     </div>

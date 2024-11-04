@@ -11,62 +11,152 @@ import { ProspectsSidebar } from './components/Calendar/ProspectsSidebar';
 const SAMPLE_BOOKINGS: Booking[] = [
   {
     id: '1',
-    services: [{ type: 'couch', details: { couch: { type: 'leather', seats: 3 } } }],
+    services: [
+      { type: 'couch', details: { couch: { type: 'leather', seats: 3 } } }
+    ],
     location: 'Bastos',
     address: '123 Avenue Kennedy',
-    phone: '677889900',
-    datetime: new Date(2024, 10, 1, 9, 0).toISOString(),
-    endTime: new Date(2024, 10, 1, 11, 0).toISOString(),
+    phone: '677 88 99 00',
+    datetime: new Date(2024, 2, 15, 9, 0).toISOString(),
+    endTime: new Date(2024, 2, 15, 11, 0).toISOString(),
     status: 'confirmed',
-    notes: 'Premium leather couch cleaning',
+    priority: 'high',
+    name: 'Jean Michel',
+    notes: 'Premium leather couch cleaning - Customer prefers morning appointments',
+    isAllDay: false
   },
   {
     id: '2',
-    services: [{ type: 'carpet', details: { carpet: { size: 'large', quantity: 2 } } }],
+    services: [
+      { type: 'carpet', details: { carpet: { size: 'large', quantity: 2 } } }
+    ],
     location: 'Mvan',
     address: '45 Rue des Manguiers',
-    phone: '699001122',
-    datetime: new Date(2024, 10, 4, 14, 0).toISOString(),
-    endTime: new Date(2024, 10, 4, 16, 0).toISOString(),
+    phone: '699 00 11 22',
+    datetime: new Date().toISOString(), // Today's date for follow-up
     status: 'pending',
-    notes: 'Two large Persian carpets',
+    priority: 'medium',
+    name: 'Marie Claire',
+    notes: 'Interested in carpet cleaning service, needs price quote',
   },
   {
     id: '3',
-    services: [{ type: 'car-seats', details: { 'car-seats': { seats: 4 } } }],
+    services: [
+      { type: 'car-seats', details: { 'car-seats': { seats: 4 } } },
+      { type: 'couch', details: { couch: { type: 'tissue', seats: 2 } } }
+    ],
     location: 'Nsam',
     address: '78 Boulevard du 20 Mai',
-    phone: '655443322',
-    datetime: new Date(2024, 10, 7, 10, 30).toISOString(),
-    endTime: new Date(2024, 10, 7, 12, 30).toISOString(),
-    status: 'completed',
-    notes: 'SUV vehicle seats',
+    phone: '655 44 33 22',
+    datetime: new Date(2024, 2, 20).toISOString(),
+    status: 'confirmed',
+    priority: 'medium',
+    name: 'Robert Fouda',
+    isAllDay: true,
+    notes: 'Combined service - SUV seats and living room couch'
   },
   {
     id: '4',
     services: [
-      { type: 'mattress', details: { mattress: { size: 'large', quantity: 1 } } },
-      { type: 'carpet', details: { carpet: { size: 'medium', quantity: 1 } } }
+      { type: 'mattress', details: { mattress: { size: 'large', quantity: 1 } } }
     ],
     location: 'Mvog-Mbi',
-    address: '156 Rue de la Paix',
-    phone: '699887766',
-    datetime: new Date(2024, 10, 11, 13, 0).toISOString(),
-    endTime: new Date(2024, 10, 11, 15, 0).toISOString(),
-    status: 'confirmed',
-    notes: 'Combined cleaning service',
+    phone: '699 88 77 66',
+    datetime: new Date().toISOString(),
+    status: 'pending',
+    priority: 'low',
+    name: 'Alice Mengue',
   },
   {
     id: '5',
-    services: [{ type: 'couch', details: { couch: { type: 'tissue', seats: 4 } } }],
+    services: [
+      { type: 'couch', details: { couch: { type: 'leather', seats: 6 } } }
+    ],
     location: 'Essos',
     address: '89 Avenue des Banques',
-    phone: '677665544',
-    datetime: new Date(2024, 10, 14, 11, 0).toISOString(),
-    endTime: new Date(2024, 10, 14, 13, 0).toISOString(),
+    phone: '677 66 55 44',
+    datetime: new Date(2024, 2, 18, 14, 0).toISOString(),
+    endTime: new Date(2024, 2, 18, 16, 0).toISOString(),
     status: 'cancelled',
-    notes: 'Rescheduling needed',
+    priority: 'high',
+    name: 'Paul Biya',
+    notes: 'Cancelled due to schedule conflict, to be rescheduled',
+    isAllDay: false
+  },
+  {
+    id: '6',
+    services: [
+      { type: 'carpet', details: { carpet: { size: 'medium', quantity: 3 } } }
+    ],
+    location: 'Mimboman',
+    phone: '655 11 22 33',
+    datetime: new Date().toISOString(),
+    status: 'pending',
+    priority: 'medium',
+    name: 'Sophie Ndongo',
+  },
+  {
+    id: '7',
+    services: [
+      { type: 'mattress', details: { mattress: { size: 'small', quantity: 2 } } },
+      { type: 'carpet', details: { carpet: { size: 'small', quantity: 1 } } }
+    ],
+    location: 'Nkolbisson',
+    address: '123 Rue de la Paix',
+    phone: '699 33 44 55',
+    datetime: new Date(2024, 2, 25, 10, 0).toISOString(),
+    endTime: new Date(2024, 2, 25, 12, 0).toISOString(),
+    status: 'confirmed',
+    priority: 'high',
+    name: 'Emmanuel Eto\'o',
+    notes: 'Student residence cleaning',
+    isAllDay: false
+  },
+  {
+    id: '8',
+    services: [
+      { type: 'car-seats', details: { 'car-seats': { seats: 7 } } }
+    ],
+    location: 'Ngousso',
+    phone: '677 99 88 77',
+    datetime: new Date().toISOString(),
+    status: 'pending',
+    priority: 'low',
+    name: 'Jacques Songo',
+  },
+  {
+    id: '9',
+    services: [
+      { type: 'couch', details: { couch: { type: 'tissue', seats: 4 } } }
+    ],
+    location: 'Omnisport',
+    address: '45 Avenue du Stade',
+    phone: '699 55 66 77',
+    datetime: new Date(2024, 2, 22).toISOString(),
+    status: 'confirmed',
+    priority: 'medium',
+    name: 'Catherine Mbock',
+    isAllDay: true,
+    notes: 'Office reception area cleaning'
+  },
+  {
+    id: '10',
+    services: [
+      { type: 'carpet', details: { carpet: { size: 'large', quantity: 1 } } },
+      { type: 'couch', details: { couch: { type: 'leather', seats: 3 } } }
+    ],
+    location: 'Tsinga',
+    address: '67 Rue des Écoles',
+    phone: '655 77 88 99',
+    datetime: new Date(2024, 2, 28, 13, 0).toISOString(),
+    endTime: new Date(2024, 2, 28, 15, 0).toISOString(),
+    status: 'confirmed',
+    priority: 'high',
+    name: 'Pierre Kamto',
+    notes: 'VIP client - Premium service package',
+    isAllDay: false
   }
+  // ... Add 10 more similar entries with varied configurations
 ];
 
 const LOCATIONS: Location[] = [
