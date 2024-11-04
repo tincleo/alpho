@@ -17,8 +17,8 @@ const SAMPLE_BOOKINGS: Booking[] = [
     location: 'Bastos',
     address: '123 Avenue Kennedy',
     phone: '677 88 99 00',
-    datetime: new Date(2024, 2, 15, 9, 0).toISOString(),
-    endTime: new Date(2024, 2, 15, 11, 0).toISOString(),
+    datetime: new Date(2024, 10, 5, 9, 0).toISOString(),
+    endTime: new Date(2024, 10, 5, 11, 0).toISOString(),
     status: 'confirmed',
     priority: 'high',
     name: 'Jean Michel',
@@ -33,7 +33,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     location: 'Mvan',
     address: '45 Rue des Manguiers',
     phone: '699 00 11 22',
-    datetime: new Date().toISOString(), // Today's date for follow-up
+    datetime: new Date(2024, 10, 8).toISOString(),
     status: 'pending',
     priority: 'medium',
     name: 'Marie Claire',
@@ -48,7 +48,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     location: 'Nsam',
     address: '78 Boulevard du 20 Mai',
     phone: '655 44 33 22',
-    datetime: new Date(2024, 2, 20).toISOString(),
+    datetime: new Date(2024, 10, 12).toISOString(),
     status: 'confirmed',
     priority: 'medium',
     name: 'Robert Fouda',
@@ -61,8 +61,9 @@ const SAMPLE_BOOKINGS: Booking[] = [
       { type: 'mattress', details: { mattress: { size: 'large', quantity: 1 } } }
     ],
     location: 'Mvog-Mbi',
+    address: '',
     phone: '699 88 77 66',
-    datetime: new Date().toISOString(),
+    datetime: new Date(2024, 10, 15).toISOString(),
     status: 'pending',
     priority: 'low',
     name: 'Alice Mengue',
@@ -75,8 +76,8 @@ const SAMPLE_BOOKINGS: Booking[] = [
     location: 'Essos',
     address: '89 Avenue des Banques',
     phone: '677 66 55 44',
-    datetime: new Date(2024, 2, 18, 14, 0).toISOString(),
-    endTime: new Date(2024, 2, 18, 16, 0).toISOString(),
+    datetime: new Date(2024, 10, 18, 14, 0).toISOString(),
+    endTime: new Date(2024, 10, 18, 16, 0).toISOString(),
     status: 'cancelled',
     priority: 'high',
     name: 'Paul Biya',
@@ -89,8 +90,9 @@ const SAMPLE_BOOKINGS: Booking[] = [
       { type: 'carpet', details: { carpet: { size: 'medium', quantity: 3 } } }
     ],
     location: 'Mimboman',
+    address: '',
     phone: '655 11 22 33',
-    datetime: new Date().toISOString(),
+    datetime: new Date(2024, 10, 20).toISOString(),
     status: 'pending',
     priority: 'medium',
     name: 'Sophie Ndongo',
@@ -104,8 +106,8 @@ const SAMPLE_BOOKINGS: Booking[] = [
     location: 'Nkolbisson',
     address: '123 Rue de la Paix',
     phone: '699 33 44 55',
-    datetime: new Date(2024, 2, 25, 10, 0).toISOString(),
-    endTime: new Date(2024, 2, 25, 12, 0).toISOString(),
+    datetime: new Date(2024, 10, 22, 10, 0).toISOString(),
+    endTime: new Date(2024, 10, 22, 12, 0).toISOString(),
     status: 'confirmed',
     priority: 'high',
     name: 'Emmanuel Eto\'o',
@@ -118,8 +120,9 @@ const SAMPLE_BOOKINGS: Booking[] = [
       { type: 'car-seats', details: { 'car-seats': { seats: 7 } } }
     ],
     location: 'Ngousso',
+    address: '',
     phone: '677 99 88 77',
-    datetime: new Date().toISOString(),
+    datetime: new Date(2024, 10, 25).toISOString(),
     status: 'pending',
     priority: 'low',
     name: 'Jacques Songo',
@@ -132,7 +135,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     location: 'Omnisport',
     address: '45 Avenue du Stade',
     phone: '699 55 66 77',
-    datetime: new Date(2024, 2, 22).toISOString(),
+    datetime: new Date(2024, 10, 27).toISOString(),
     status: 'confirmed',
     priority: 'medium',
     name: 'Catherine Mbock',
@@ -148,8 +151,8 @@ const SAMPLE_BOOKINGS: Booking[] = [
     location: 'Tsinga',
     address: '67 Rue des Écoles',
     phone: '655 77 88 99',
-    datetime: new Date(2024, 2, 28, 13, 0).toISOString(),
-    endTime: new Date(2024, 2, 28, 15, 0).toISOString(),
+    datetime: new Date(2024, 10, 29, 13, 0).toISOString(),
+    endTime: new Date(2024, 10, 29, 15, 0).toISOString(),
     status: 'confirmed',
     priority: 'high',
     name: 'Pierre Kamto',
@@ -178,13 +181,22 @@ export default function App() {
   const [showProspects, setShowProspects] = React.useState(false);
 
   const filteredBookings = React.useMemo(() => {
-    return bookings.filter(booking => {
+    const filtered = bookings.filter(booking => {
       const hasSelectedService = booking.services.some(service => selectedServices.includes(service.type));
       const hasSelectedStatus = selectedStatuses.includes(booking.status);
       const hasSelectedLocation = selectedLocations.includes(booking.location);
       return hasSelectedService && hasSelectedStatus && hasSelectedLocation;
     });
-  }, [bookings, selectedServices, selectedStatuses, selectedLocations]);
+
+    if (viewMode !== 'agenda') {
+      return filtered.filter(booking => {
+        const bookingDate = new Date(booking.datetime);
+        return !isNaN(bookingDate.getTime());
+      });
+    }
+
+    return filtered;
+  }, [bookings, selectedServices, selectedStatuses, selectedLocations, viewMode]);
 
   const handlePrevious = () => {
     setCurrentDate((date) =>

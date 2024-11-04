@@ -6,7 +6,6 @@ import { format } from 'date-fns';
 interface BookingPreviewProps {
   booking: Booking;
   onClick: (e: React.MouseEvent) => void;
-  compact?: boolean;
   draggable?: boolean;
   onDragStart?: (booking: Booking) => void;
   onDragEnd?: () => void;
@@ -23,7 +22,6 @@ const SERVICE_TYPES: Record<string, string> = {
 export function BookingPreview({
   booking,
   onClick,
-  compact,
   draggable = true,
   onDragStart,
   onDragEnd,

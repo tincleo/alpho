@@ -52,7 +52,7 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
     }), {}) ?? {}
   );
   const [formData, setFormData] = React.useState({
-    location: initialBooking?.location ?? 'Bastos',
+    location: initialBooking?.location ?? '',
     address: initialBooking?.address ?? '',
     phone: initialBooking?.phone ?? '',
     date: initialBooking?.datetime
@@ -72,7 +72,9 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
     priority: initialBooking?.priority ?? 'medium',
     name: initialBooking?.name ?? '',
   });
-  const [prospectType, setProspectType] = React.useState<'booking' | 'follow-up'>(initialType ?? 'follow-up');
+  const [prospectType, setProspectType] = React.useState<'booking' | 'follow-up'>(
+    initialType ?? (selectedDate ? 'booking' : 'follow-up')
+  );
   const [showNotes, setShowNotes] = React.useState(!!initialBooking?.notes);
   const [locationSearch, setLocationSearch] = React.useState('');
   const [showLocationDropdown, setShowLocationDropdown] = React.useState(false);
@@ -186,7 +188,7 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <form onSubmit={handleSubmit} className="p-4">
+          <form id="prospect-form" onSubmit={handleSubmit} className="p-4">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-2">
                 <button
