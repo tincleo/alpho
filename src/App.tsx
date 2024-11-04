@@ -6,6 +6,7 @@ import { AgendaView } from './components/Calendar/AgendaView';
 import { AddBookingModal } from './components/Calendar/AddBookingModal';
 import { Booking, ViewMode, ServiceType, Location } from './types/calendar';
 import { Sidebar } from './components/Calendar/Sidebar';
+import { ProspectsSidebar } from './components/Calendar/ProspectsSidebar';
 
 const SAMPLE_BOOKINGS: Booking[] = [
   {
@@ -84,6 +85,7 @@ export default function App() {
   const [selectedServices, setSelectedServices] = React.useState<ServiceType[]>(['couch', 'carpet', 'car-seats', 'mattress']);
   const [selectedStatuses, setSelectedStatuses] = React.useState<Booking['status'][]>(['pending', 'confirmed', 'completed', 'cancelled']);
   const [selectedLocations, setSelectedLocations] = React.useState<Location[]>(LOCATIONS);
+  const [showProspects, setShowProspects] = React.useState(false);
 
   const filteredBookings = React.useMemo(() => {
     return bookings.filter(booking => {
@@ -156,6 +158,7 @@ export default function App() {
             onToday={handleToday}
             onViewModeChange={setViewMode}
             onAddBooking={() => handleAddBookingClick()}
+            onToggleProspects={() => setShowProspects(!showProspects)}
           />
         </div>
         {viewMode === 'agenda' ? (
@@ -185,6 +188,14 @@ export default function App() {
           />
         )}
       </div>
+      
+      <ProspectsSidebar
+        bookings={bookings}
+        onUpdateBooking={handleUpdateBooking}
+        onDeleteBooking={handleDeleteBooking}
+        isExpanded={showProspects}
+        onToggle={() => setShowProspects(!showProspects)}
+      />
     </div>
   );
 }

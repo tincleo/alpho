@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Bell } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Bell, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { ViewMode } from '../../types/calendar';
 
@@ -11,6 +11,7 @@ interface CalendarHeaderProps {
   onToday: () => void;
   onViewModeChange: (mode: ViewMode) => void;
   onAddBooking: () => void;
+  onToggleProspects: () => void;
 }
 
 export function CalendarHeader({
@@ -21,6 +22,7 @@ export function CalendarHeader({
   onToday,
   onViewModeChange,
   onAddBooking,
+  onToggleProspects,
 }: CalendarHeaderProps) {
   const [showViewSelector, setShowViewSelector] = React.useState(false);
 
@@ -127,6 +129,14 @@ export function CalendarHeader({
             aria-label="Notifications"
           >
             <Bell className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={onToggleProspects}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            aria-label="View Prospects"
+          >
+            <Users className="w-5 h-5" />
           </button>
 
           <button
