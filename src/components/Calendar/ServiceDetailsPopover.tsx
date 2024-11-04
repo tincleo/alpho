@@ -10,6 +10,7 @@ interface ServiceDetailsPopoverProps {
   onClose: () => void;
   onClear: () => void;
   targetElement: HTMLElement;
+  detailsOptional?: boolean;
 }
 
 const DEFAULT_VALUES: Record<ServiceType, ServiceDetails> = {
@@ -25,7 +26,8 @@ export function ServiceDetailsPopover({
   onSubmit,
   onClose,
   onClear,
-  targetElement 
+  targetElement,
+  detailsOptional = false
 }: ServiceDetailsPopoverProps) {
   const [details, setDetails] = React.useState<ServiceDetails>(() => ({
     ...DEFAULT_VALUES[serviceType],
@@ -88,6 +90,8 @@ export function ServiceDetailsPopover({
   }, [targetElement]);
 
   const validateForm = (): boolean => {
+    if (detailsOptional) return true;
+
     const newErrors: Record<string, string> = {};
 
     switch (serviceType) {
@@ -321,44 +325,46 @@ export function ServiceDetailsPopover({
       ref={popoverRef}
       className="fixed z-50 w-72 bg-white rounded-lg shadow-lg border border-gray-200 p-4"
     >
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-medium text-gray-900">
-          {serviceType.charAt(0).toUpperCase() + serviceType.slice(1)} Details
-        </h3>
-        <button
-          onClick={onClose}
-          className="p-1 text-gray-400 hover:text-gray-600 rounded-full transition-colors"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {renderContent()}
-        <div className="flex justify-between items-center pt-2">
+      <div className="p-3">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-medium">
+            Service Details {!detailsOptional && <span className="text-red-500">*</span>}
+          </h3>
           <button
-            type="button"
-            onClick={onClear}
-            className="text-sm text-red-600 hover:text-red-700"
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
           >
-            Clear
+            <X className="w-4 h-4" />
           </button>
-          <div className="flex gap-2">
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {renderContent()}
+          <div className="flex justify-between items-center pt-2">
             <button
               type="button"
-              onClick={onClose}
-              className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+              onClick={onClear}
+              className="text-sm text-red-600 hover:text-red-700"
             >
-              Cancel
+              Clear
             </button>
-            <button
-              type="submit"
-              className="px-3 py-1.5 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
-            >
-              Save
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-3 py-1.5 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+              >
+                Save
+              </button>
+            </div>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>,
     document.body
   );

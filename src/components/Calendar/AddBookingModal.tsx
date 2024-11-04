@@ -1,7 +1,7 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, Calendar, UserCheck } from 'lucide-react';
 import { format, setHours, setMinutes, parse, addHours } from 'date-fns';
-import { Booking, ServiceType, ServiceDetails, Location } from '../../types/calendar';
+import { Booking, ServiceType, ServiceDetails, Location, Priority } from '../../types/calendar';
 import { ServiceTypeSelector } from './ServiceTypeSelector';
 
 interface AddBookingModalProps {
@@ -9,6 +9,7 @@ interface AddBookingModalProps {
   onAdd: (booking: Omit<Booking, 'id'>) => void;
   selectedDate?: Date;
   initialBooking?: Booking;
+  initialType?: 'booking' | 'follow-up';
 }
 
 const LOCATIONS: Location[] = [
@@ -17,6 +18,8 @@ const LOCATIONS: Location[] = [
   'Nkolbisson', 'Olembe', 'Ngousso', 'Messa', 
   'Omnisport', 'Tsinga', 'Etoa-Meki', 'Nlongkak'
 ];
+
+const PRIORITIES: Priority[] = ['low', 'medium', 'high'];
 
 const generateTimeOptions = () => {
   const options: string[] = [];
@@ -38,7 +41,7 @@ const formatPhoneNumber = (value: string) => {
   return `${numbers.slice(0, 3)} ${numbers.slice(3, 5)} ${numbers.slice(5, 7)} ${numbers.slice(7)}`;
 };
 
-export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking }: AddBookingModalProps) {
+export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, initialType }: AddBookingModalProps) {
   const [selectedServices, setSelectedServices] = React.useState<ServiceType[]>(
     initialBooking?.services.map(s => s.type) ?? []
   );
@@ -66,7 +69,10 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking }
     notes: initialBooking?.notes ?? '',
     status: initialBooking?.status ?? 'pending',
     isAllDay: initialBooking?.isAllDay ?? false,
+    priority: initialBooking?.priority ?? 'medium',
+    name: initialBooking?.name ?? '',
   });
+  const [prospectType, setProspectType] = React.useState<'booking' | 'follow-up'>(initialType ?? 'follow-up');
 
   const handleServiceToggle = (type: ServiceType) => {
     setSelectedServices(prev => {
@@ -113,55 +119,51 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking }
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (prospectType === 'booking' && !formData.date) {
+      alert('Booking date is required for confirmed bookings');
+      return;
+    }
+
+    if (formData.status === 'confirmed' && (!formData.startTime || !formData.endTime)) {
+      alert('Start and end time are required for confirmed bookings');
+      return;
+    }
+
     if (selectedServices.length === 0) {
       alert('Please select at least one service');
       return;
     }
 
-    const missingDetails = selectedServices.some(service => !serviceDetails[service]);
-    if (missingDetails) {
-      alert('Please fill in all service details');
-      return;
-    }
-
-    const datetime = parse(
-      `${formData.date} ${formData.startTime}`,
-      'yyyy-MM-dd HH:mm',
-      new Date()
-    ).toISOString();
-
-    const endTime = formData.isAllDay ? undefined : parse(
-      `${formData.date} ${formData.endTime}`,
-      'yyyy-MM-dd HH:mm',
-      new Date()
-    ).toISOString();
+    const services = selectedServices.map(type => ({
+      type,
+      details: { [type]: serviceDetails[type] || {} }
+    }));
 
     onAdd({
-      services: selectedServices.map(type => ({
-        type,
-        details: {
-          [type]: serviceDetails[type]
-        }
-      })),
-      location: formData.location as Location,
+      services,
+      location: formData.location,
       address: formData.address,
-      phone: formData.phone.replace(/\s/g, ''),
-      datetime,
-      endTime,
+      phone: formData.phone,
+      datetime: prospectType === 'booking' ? 
+        new Date(`${formData.date}T${formData.startTime}`).toISOString() :
+        new Date().toISOString(),
+      endTime: prospectType === 'booking' && formData.endTime ?
+        new Date(`${formData.date}T${formData.endTime}`).toISOString() :
+        undefined,
       notes: formData.notes,
-      status: formData.status as Booking['status'],
+      status: formData.status,
       isAllDay: formData.isAllDay,
     });
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-40">
-      <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-        <div className="p-3 border-b sticky top-0 bg-white z-10">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold">
-              {initialBooking ? 'Edit Booking' : 'New Booking'}
+              {initialBooking ? 'Edit Prospect' : 'New Prospect'}
             </h2>
             <button
               onClick={onClose}
@@ -174,19 +176,50 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking }
 
         <div className="p-4 overflow-y-auto flex-1">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="w-full">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setProspectType('booking')}
+                className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-all ${
+                  prospectType === 'booking'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <Calendar className="w-4 h-4" />
+                <span className="font-medium">Booking</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setProspectType('follow-up')}
+                className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-all ${
+                  prospectType === 'follow-up'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <UserCheck className="w-4 h-4" />
+                <span className="font-medium">Follow-up</span>
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Services <span className="text-red-500">*</span>
+              </label>
               <ServiceTypeSelector
                 selectedServices={selectedServices}
                 serviceDetails={serviceDetails}
                 onToggleService={handleServiceToggle}
                 onUpdateDetails={handleServiceDetailsUpdate}
+                detailsOptional={prospectType === 'follow-up'}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status <span className="text-red-500">*</span>
+                  Status
                 </label>
                 <select
                   value={formData.status}
@@ -207,35 +240,34 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking }
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Location <span className="text-red-500">*</span>
+                  Priority
                 </label>
                 <select
-                  value={formData.location}
+                  value={formData.priority}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      location: e.target.value as Location,
+                      priority: e.target.value as Priority,
                     }))
                   }
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  {LOCATIONS.map((location) => (
-                    <option key={location} value={location}>
-                      {location}
+                  {PRIORITIES.map((priority) => (
+                    <option key={priority} value={priority}>
+                      {priority.charAt(0).toUpperCase() + priority.slice(1)}
                     </option>
                   ))}
                 </select>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Date <span className="text-red-500">*</span>
+            {prospectType === 'booking' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-700">
+                    Booking date <span className="text-red-500">*</span>
                   </label>
-                  <label className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">All day</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       checked={formData.isAllDay}
@@ -245,17 +277,58 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking }
                           isAllDay: e.target.checked,
                         }))
                       }
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="sr-only peer"
                     />
+                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    <span className="ml-2 text-sm text-gray-600">All day</span>
                   </label>
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <input
+                      type="date"
+                      required={prospectType === 'booking'}
+                      value={formData.date}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, date: e.target.value }))
+                      }
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  {!formData.isAllDay && (
+                    <div>
+                      <select
+                        required
+                        value={formData.startTime}
+                        onChange={(e) => handleStartTimeChange(e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        {TIME_OPTIONS.map((time) => (
+                          <option key={time} value={time}>
+                            {time}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Prospect Name
+                </label>
                 <input
-                  type="date"
-                  required
-                  value={formData.date}
+                  type="text"
+                  value={formData.name}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, date: e.target.value }))
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
                   }
+                  placeholder="Customer name"
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -293,44 +366,6 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking }
               />
             </div>
 
-            {!formData.isAllDay && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Time <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.startTime}
-                    onChange={(e) => handleStartTimeChange(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    {TIME_OPTIONS.map((time) => (
-                      <option key={time} value={time}>
-                        {time}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    End Time <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.endTime}
-                    onChange={(e) => handleEndTimeChange(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    {TIME_OPTIONS.map((time) => (
-                      <option key={time} value={time}>
-                        {time}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Notes
@@ -341,30 +376,27 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking }
                   setFormData((prev) => ({ ...prev, notes: e.target.value }))
                 }
                 rows={3}
-                placeholder="Additional notes about the booking"
+                placeholder="Additional notes about the prospect"
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-          </form>
-        </div>
 
-        <div className="p-3 border-t sticky bottom-0 bg-white z-10">
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-3 py-1.5 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              onClick={handleSubmit}
-              className="px-3 py-1.5 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              {initialBooking ? 'Save Changes' : 'Add Booking'}
-            </button>
-          </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+              >
+                Save
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

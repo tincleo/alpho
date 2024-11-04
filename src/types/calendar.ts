@@ -9,6 +9,8 @@ export type Size = 'small' | 'medium' | 'large';
 
 export type ViewMode = 'month' | 'week' | 'agenda';
 
+export type Priority = 'low' | 'medium' | 'high';
+
 interface CarpetDetails {
   size: Size;
   quantity: number;
@@ -46,4 +48,6 @@ export interface Booking {
   notes?: string;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   isAllDay?: boolean;
+  priority: Priority;
+  name?: string;
 }

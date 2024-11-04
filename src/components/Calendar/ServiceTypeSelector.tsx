@@ -8,6 +8,7 @@ interface ServiceTypeSelectorProps {
   onToggleService: (type: ServiceType) => void;
   onUpdateDetails: (type: ServiceType, details: ServiceDetails) => void;
   readOnly?: boolean;
+  detailsOptional?: boolean;
 }
 
 const SERVICE_TYPES: Record<ServiceType, string> = {
@@ -45,7 +46,8 @@ export function ServiceTypeSelector({
   serviceDetails,
   onToggleService, 
   onUpdateDetails,
-  readOnly = false
+  readOnly = false,
+  detailsOptional = false
 }: ServiceTypeSelectorProps) {
   const [activePopover, setActivePopover] = React.useState<ServiceType | null>(null);
   const buttonRefs = React.useRef<Record<ServiceType, HTMLButtonElement | null>>({
@@ -61,10 +63,13 @@ export function ServiceTypeSelector({
 
   const handleServiceClick = (type: ServiceType) => {
     if (readOnly) return;
-    if (selectedServices.includes(type)) {
-      setActivePopover(type);
-    } else {
+    
+    if (!selectedServices.includes(type)) {
       onToggleService(type);
+      if (!detailsOptional) {
+        setActivePopover(type);
+      }
+    } else {
       setActivePopover(type);
     }
   };
@@ -75,8 +80,8 @@ export function ServiceTypeSelector({
   };
 
   const handlePopoverClose = (type: ServiceType) => {
-    if (!serviceDetails[type]) {
-      onToggleService(type);
+    if (!detailsOptional && !serviceDetails[type]) {
+      onToggleService(type); // Deselect if details are required but not provided
     }
     setActivePopover(null);
   };
