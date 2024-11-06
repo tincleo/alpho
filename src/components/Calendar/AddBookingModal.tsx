@@ -1,8 +1,9 @@
 import React from 'react';
 import { X, Calendar, UserCheck, ChevronDown, Plus } from 'lucide-react';
 import { format, setHours, setMinutes, parse, addHours } from 'date-fns';
-import { Booking, ServiceType, ServiceDetails, Location, Priority } from '../../types/calendar';
+import { Booking, ServiceType, ServiceDetails, Location, Priority, Reminder } from '../../types/calendar';
 import { ServiceTypeSelector } from './ServiceTypeSelector';
+import { RemindersAccordion } from './RemindersAccordion';
 
 interface AddBookingModalProps {
   onClose: () => void;
@@ -78,6 +79,9 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
   const [showNotes, setShowNotes] = React.useState(!!initialBooking?.notes);
   const [locationSearch, setLocationSearch] = React.useState('');
   const [showLocationDropdown, setShowLocationDropdown] = React.useState(false);
+  const [reminders, setReminders] = React.useState<Reminder[]>(
+    initialBooking?.reminders || []
+  );
 
   const filteredLocations = React.useMemo(() => {
     return LOCATIONS.filter(location => 
@@ -166,6 +170,7 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
       isAllDay: formData.isAllDay,
       priority: formData.priority,
       name: formData.name,
+      reminders,
     });
     onClose();
   };
@@ -190,6 +195,10 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
         <div className="flex-1 overflow-y-auto">
           <form id="prospect-form" onSubmit={handleSubmit} className="p-4">
             <div className="space-y-4">
+              <RemindersAccordion
+                reminders={reminders}
+                onChange={setReminders}
+              />
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"

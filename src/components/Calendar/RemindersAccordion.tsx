@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronDown, ChevronUp, Plus, X, Bell } from 'lucide-react';
 import { Reminder } from '../../types/calendar';
-import { format } from 'date-fns';
+import { format, startOfDay, isBefore, isSameDay, addDays } from 'date-fns';
 
 interface RemindersAccordionProps {
   reminders: Reminder[];
@@ -11,30 +11,94 @@ interface RemindersAccordionProps {
 export function RemindersAccordion({ reminders, onChange }: RemindersAccordionProps) {
   const [isOpen, setIsOpen] = React.useState(true);
 
+  // Check and remove outdated reminders
+  React.useEffect(() => {
+    const today = startOfDay(new Date());
+    const hasOutdatedReminders = reminders.some(reminder => 
+      isBefore(new Date(reminder.datetime), today)
+    );
+
+    if (hasOutdatedReminders) {
+      // Remove outdated reminders
+      const updatedReminders = reminders.filter(reminder => 
+        !isBefore(new Date(reminder.datetime), today)
+      );
+      onChange(updatedReminders);
+    }
+  }, [reminders, onChange]);
+
   const addReminder = () => {
+    // Find the next available date starting from today
+    let nextDate = startOfDay(new Date());
+    
+    // Keep incrementing the date until we find a day without a reminder
+    while (reminders.some(reminder => isSameDay(new Date(reminder.datetime), nextDate))) {
+      nextDate = addDays(nextDate, 1);
+    }
+    
     const newReminder: Reminder = {
       id: Math.random().toString(36).substr(2, 9),
-      datetime: new Date().toISOString(),
-      completed: false
+      datetime: nextDate.toISOString(),
     };
-    onChange([...reminders, newReminder]);
+    
+    // Add new reminder and sort
+    const updatedReminders = [...reminders, newReminder].sort((a, b) => 
+      new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
+    );
+    
+    onChange(updatedReminders);
+    
+    // After adding the reminder, focus and open the date picker
+    setTimeout(() => {
+      const lastDateInput = document.querySelector<HTMLInputElement>('.reminder-date-input:last-of-type');
+      if (lastDateInput) {
+        lastDateInput.focus();
+        lastDateInput.showPicker();
+      }
+    }, 0);
   };
 
   const deleteReminder = (id: string) => {
     onChange(reminders.filter(reminder => reminder.id !== id));
   };
 
-  const updateReminderDateTime = (id: string, datetime: string) => {
-    onChange(reminders.map(reminder => 
-      reminder.id === id ? { ...reminder, datetime } : reminder
-    ));
+  const updateReminderDateTime = (id: string, dateStr: string) => {
+    // Prevent selecting dates before today
+    const selectedDate = startOfDay(new Date(dateStr));
+    const today = startOfDay(new Date());
+
+    if (isBefore(selectedDate, today)) {
+      return; // Don't update if selected date is before today
+    }
+
+    // Check if another reminder already exists for this date
+    const hasExistingReminder = reminders.some(reminder => 
+      reminder.id !== id && // Exclude current reminder from check
+      isSameDay(new Date(reminder.datetime), selectedDate)
+    );
+
+    if (hasExistingReminder) {
+      alert('A reminder already exists for this date. Please choose a different date.');
+      return;
+    }
+    
+    // Update reminder and sort the array
+    const updatedReminders = reminders.map(reminder => 
+      reminder.id === id ? { 
+        ...reminder, 
+        datetime: selectedDate.toISOString(),
+      } : reminder
+    ).sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime());
+
+    onChange(updatedReminders);
   };
 
-  const toggleReminderComplete = (id: string) => {
-    onChange(reminders.map(reminder => 
-      reminder.id === id ? { ...reminder, completed: !reminder.completed } : reminder
-    ));
-  };
+  const today = startOfDay(new Date());
+
+  // Sort reminders by date
+  const sortedReminders = [...reminders].sort((a, b) => 
+    new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
+  );
 
   return (
     <div className="border rounded-lg overflow-hidden">
@@ -58,43 +122,44 @@ export function RemindersAccordion({ reminders, onChange }: RemindersAccordionPr
       </button>
 
       {isOpen && (
-        <div className="p-4 space-y-3 bg-white">
-          {reminders.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-2">
-              No reminders set
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {reminders.map((reminder) => (
-                <div
-                  key={reminder.id}
-                  className="flex items-center gap-3 bg-gray-50 rounded-lg p-2"
-                >
-                  <input
-                    type="checkbox"
-                    checked={reminder.completed}
-                    onChange={() => toggleReminderComplete(reminder.id)}
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <input
-                    type="datetime-local"
-                    value={format(new Date(reminder.datetime), "yyyy-MM-dd'T'HH:mm")}
-                    onChange={(e) => updateReminderDateTime(reminder.id, new Date(e.target.value).toISOString())}
-                    className={`flex-1 text-sm border-0 bg-transparent focus:ring-0 ${
-                      reminder.completed ? 'text-gray-400 line-through' : 'text-gray-900'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => deleteReminder(reminder.id)}
-                    className="p-1 hover:bg-gray-200 rounded-lg transition-colors"
+        <div className="p-3 space-y-2 bg-white">
+          <div className="rounded-lg overflow-hidden">
+            {sortedReminders.length > 0 ? (
+              <div className="divide-y divide-gray-100">
+                {sortedReminders.map((reminder) => (
+                  <div
+                    key={reminder.id}
+                    className="flex items-center gap-3 px-3 py-2 relative hover:bg-gray-50 transition-colors"
                   >
-                    <X className="w-4 h-4 text-gray-500" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+                    <input
+                      type="date"
+                      value={format(new Date(reminder.datetime), "yyyy-MM-dd")}
+                      onChange={(e) => updateReminderDateTime(reminder.id, e.target.value)}
+                      min={format(today, "yyyy-MM-dd")}
+                      className="reminder-date-input absolute left-0 top-0 opacity-0 w-full h-full cursor-pointer"
+                    />
+                    <span className="flex-1 text-sm text-gray-900">
+                      {format(new Date(reminder.datetime), "EEEE, dd MMMM, yyyy")}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteReminder(reminder.id);
+                      }}
+                      className="p-1 hover:bg-gray-100 rounded-lg transition-colors relative z-10"
+                    >
+                      <X className="w-4 h-4 text-gray-500" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="px-3 py-2 text-sm text-gray-500">
+                No upcoming reminders
+              </div>
+            )}
+          </div>
           
           <button
             type="button"
