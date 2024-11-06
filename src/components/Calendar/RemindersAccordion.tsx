@@ -1,15 +1,23 @@
 import React from 'react';
 import { ChevronDown, ChevronUp, Plus, X, Bell } from 'lucide-react';
 import { Reminder } from '../../types/calendar';
-import { format, startOfDay, isBefore, isSameDay, addDays } from 'date-fns';
+import { format, startOfDay, isBefore, isSameDay, differenceInDays } from 'date-fns';
 
 interface RemindersAccordionProps {
   reminders: Reminder[];
   onChange: (reminders: Reminder[]) => void;
 }
 
+const MAX_REMINDERS = 5;
+
 export function RemindersAccordion({ reminders, onChange }: RemindersAccordionProps) {
   const [isOpen, setIsOpen] = React.useState(true);
+  const [showDatePicker, setShowDatePicker] = React.useState(false);
+  const [selectedDate, setSelectedDate] = React.useState(format(new Date(), "yyyy-MM-dd"));
+  const addButtonRef = React.useRef<HTMLButtonElement>(null);
+  const dateInputRef = React.useRef<HTMLInputElement>(null);
+
+  const hasReachedLimit = reminders.length >= MAX_REMINDERS;
 
   // Check and remove outdated reminders
   React.useEffect(() => {
@@ -19,7 +27,6 @@ export function RemindersAccordion({ reminders, onChange }: RemindersAccordionPr
     );
 
     if (hasOutdatedReminders) {
-      // Remove outdated reminders
       const updatedReminders = reminders.filter(reminder => 
         !isBefore(new Date(reminder.datetime), today)
       );
@@ -27,18 +34,34 @@ export function RemindersAccordion({ reminders, onChange }: RemindersAccordionPr
     }
   }, [reminders, onChange]);
 
+  // Close popover on escape key
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowDatePicker(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, []);
+
   const addReminder = () => {
-    // Find the next available date starting from today
-    let nextDate = startOfDay(new Date());
+    const selectedDateTime = startOfDay(new Date(selectedDate));
     
-    // Keep incrementing the date until we find a day without a reminder
-    while (reminders.some(reminder => isSameDay(new Date(reminder.datetime), nextDate))) {
-      nextDate = addDays(nextDate, 1);
+    // Check if a reminder already exists for this date
+    const hasExistingReminder = reminders.some(reminder => 
+      isSameDay(new Date(reminder.datetime), selectedDateTime)
+    );
+
+    if (hasExistingReminder) {
+      alert('A reminder already exists for this date. Please choose a different date.');
+      return;
     }
     
     const newReminder: Reminder = {
       id: Math.random().toString(36).substr(2, 9),
-      datetime: nextDate.toISOString(),
+      datetime: selectedDateTime.toISOString(),
     };
     
     // Add new reminder and sort
@@ -47,15 +70,7 @@ export function RemindersAccordion({ reminders, onChange }: RemindersAccordionPr
     );
     
     onChange(updatedReminders);
-    
-    // After adding the reminder, focus and open the date picker
-    setTimeout(() => {
-      const lastDateInput = document.querySelector<HTMLInputElement>('.reminder-date-input:last-of-type');
-      if (lastDateInput) {
-        lastDateInput.focus();
-        lastDateInput.showPicker();
-      }
-    }, 0);
+    setShowDatePicker(false);
   };
 
   const deleteReminder = (id: string) => {
@@ -100,8 +115,45 @@ export function RemindersAccordion({ reminders, onChange }: RemindersAccordionPr
     new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
   );
 
+  const getReminderMessage = (date: string) => {
+    const days = differenceInDays(new Date(date), startOfDay(new Date()));
+    if (days === 0) return "You'll get a reminder today";
+    if (days === 1) return "You'll get a reminder tomorrow";
+    return `You'll get a reminder in ${days} days`;
+  };
+
+  // Reset selected date to today whenever the popover opens
+  const openDatePicker = () => {
+    if (hasReachedLimit) return;
+    
+    setSelectedDate(format(new Date(), "yyyy-MM-dd"));
+    setShowDatePicker(true);
+    // Focus and open the date picker after a short delay to ensure the input is rendered
+    setTimeout(() => {
+      if (dateInputRef.current) {
+        dateInputRef.current.focus();
+        dateInputRef.current.showPicker();
+      }
+    }, 100);
+  };
+
+  const formatReminderDate = (date: Date) => {
+    const days = differenceInDays(date, startOfDay(new Date()));
+    let daysText = '';
+    
+    if (days === 0) {
+      daysText = 'today';
+    } else if (days === 1) {
+      daysText = 'tomorrow';
+    } else {
+      daysText = `in ${days} days`;
+    }
+    
+    return `${format(date, "EEEE, dd MMMM")} (${daysText})`;
+  };
+
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="border rounded-lg overflow-hidden relative">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -123,8 +175,8 @@ export function RemindersAccordion({ reminders, onChange }: RemindersAccordionPr
 
       {isOpen && (
         <div className="p-3 space-y-2 bg-white">
-          <div className="rounded-lg overflow-hidden">
-            {sortedReminders.length > 0 ? (
+          {sortedReminders.length > 0 && (
+            <div className="rounded-lg overflow-hidden">
               <div className="divide-y divide-gray-100">
                 {sortedReminders.map((reminder) => (
                   <div
@@ -139,7 +191,7 @@ export function RemindersAccordion({ reminders, onChange }: RemindersAccordionPr
                       className="reminder-date-input absolute left-0 top-0 opacity-0 w-full h-full cursor-pointer"
                     />
                     <span className="flex-1 text-sm text-gray-900">
-                      {format(new Date(reminder.datetime), "EEEE, dd MMMM, yyyy")}
+                      {formatReminderDate(new Date(reminder.datetime))}
                     </span>
                     <button
                       type="button"
@@ -154,21 +206,74 @@ export function RemindersAccordion({ reminders, onChange }: RemindersAccordionPr
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="px-3 py-2 text-sm text-gray-500">
-                No upcoming reminders
-              </div>
-            )}
-          </div>
+            </div>
+          )}
           
           <button
             type="button"
-            onClick={addReminder}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            ref={addButtonRef}
+            onClick={openDatePicker}
+            disabled={hasReachedLimit}
+            className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
+              hasReachedLimit 
+                ? 'text-gray-400 bg-gray-50 cursor-not-allowed' 
+                : 'text-blue-600 hover:bg-blue-50'
+            }`}
+            title={hasReachedLimit ? `Maximum ${MAX_REMINDERS} reminders allowed` : undefined}
           >
             <Plus className="w-4 h-4" />
-            Add reminder
+            {hasReachedLimit ? `Maximum ${MAX_REMINDERS} reminders reached` : 'Add reminder'}
           </button>
+        </div>
+      )}
+
+      {showDatePicker && !hasReachedLimit && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-25" onClick={() => setShowDatePicker(false)} />
+          <div className="relative min-h-screen flex items-center justify-center p-4">
+            <div className="relative bg-white rounded-lg shadow-lg w-full max-w-sm">
+              <div className="p-4 space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Select date
+                  </label>
+                  <div 
+                    className="relative"
+                    onClick={() => dateInputRef.current?.showPicker()}
+                  >
+                    <input
+                      ref={dateInputRef}
+                      type="date"
+                      value={selectedDate}
+                      min={format(today, "yyyy-MM-dd")}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+                    />
+                    <div className="absolute inset-0" />
+                  </div>
+                  <p className="mt-2 text-sm text-gray-600">
+                    {getReminderMessage(selectedDate)}
+                  </p>
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowDatePicker(false)}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={addReminder}
+                    className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
