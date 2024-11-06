@@ -1,9 +1,10 @@
 import React from 'react';
 import { X, Calendar, Clock, MapPin, Phone, User, Flag, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
-import { Booking } from '../../types/calendar';
+import { Booking, Reminder } from '../../types/calendar';
 import { ServiceTypeSelector } from './ServiceTypeSelector';
 import { AddBookingModal } from './AddBookingModal';
+import { RemindersAccordion } from './RemindersAccordion';
 
 interface BookingModalProps {
   booking: Booking;
@@ -29,6 +30,7 @@ export function BookingModal({ booking, onClose, onEdit, onDelete }: BookingModa
   const [showEditModal, setShowEditModal] = React.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const deleteButtonRef = React.useRef<HTMLButtonElement>(null);
+  const [reminders, setReminders] = React.useState<Reminder[]>(booking.reminders || []);
 
   const handleEdit = () => {
     setShowEditModal(true);
@@ -37,6 +39,15 @@ export function BookingModal({ booking, onClose, onEdit, onDelete }: BookingModa
   const handleDelete = () => {
     setShowDeleteConfirm(false);
     onDelete(booking.id);
+    onClose();
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onEdit({
+      ...formData,
+      reminders,
+    });
     onClose();
   };
 
@@ -65,6 +76,11 @@ export function BookingModal({ booking, onClose, onEdit, onDelete }: BookingModa
           </div>
 
           <div className="space-y-4">
+            <RemindersAccordion
+              reminders={reminders}
+              onChange={setReminders}
+            />
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Services
@@ -190,14 +206,21 @@ export function BookingModal({ booking, onClose, onEdit, onDelete }: BookingModa
 
       {showEditModal && (
         <AddBookingModal
-          initialBooking={booking}
+          initialBooking={{
+            ...booking,
+            reminders: reminders
+          }}
           initialType={booking.datetime ? 'booking' : 'follow-up'}
           onClose={() => {
             setShowEditModal(false);
             onClose();
           }}
           onAdd={(updatedBooking) => {
-            onEdit({ ...updatedBooking, id: booking.id });
+            onEdit({ 
+              ...updatedBooking, 
+              id: booking.id,
+              reminders: reminders
+            });
             setShowEditModal(false);
             onClose();
           }}

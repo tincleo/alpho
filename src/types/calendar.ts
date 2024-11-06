@@ -29,6 +29,12 @@ export interface ServiceDetails {
   };
 }
 
+export interface Reminder {
+  id: string;
+  datetime: string;
+  completed?: boolean;
+}
+
 export interface Booking {
   id: string;
   services: {
@@ -45,4 +51,5 @@ export interface Booking {
   isAllDay?: boolean;
   priority: Priority;
   name?: string;
+  reminders?: Reminder[];
 }
