@@ -7,6 +7,8 @@ import { AddBookingModal } from './components/Calendar/AddBookingModal';
 import { Booking, ViewMode, ServiceType, Location } from './types/calendar';
 import { Sidebar } from './components/Calendar/Sidebar';
 import { ProspectsSidebar } from './components/Calendar/ProspectsSidebar';
+import { RemindersPane } from './components/Calendar/RemindersPane';
+import { BookingModal } from './components/Calendar/BookingModal';
 
 const SAMPLE_BOOKINGS: Booking[] = [
   {
@@ -23,7 +25,13 @@ const SAMPLE_BOOKINGS: Booking[] = [
     priority: 'high',
     name: 'Jean Michel',
     notes: 'Premium leather couch cleaning - Customer prefers morning appointments',
-    isAllDay: false
+    isAllDay: false,
+    reminders: [
+      {
+        id: 'r1',
+        datetime: new Date(2024, 10, 3).toISOString(),
+      }
+    ]
   },
   {
     id: '2',
@@ -38,6 +46,16 @@ const SAMPLE_BOOKINGS: Booking[] = [
     priority: 'medium',
     name: 'Marie Claire',
     notes: 'Interested in carpet cleaning service, needs price quote',
+    reminders: [
+      {
+        id: 'r2',
+        datetime: new Date(2024, 10, 6).toISOString(),
+      },
+      {
+        id: 'r3',
+        datetime: new Date(2024, 10, 7).toISOString(),
+      }
+    ]
   },
   {
     id: '3',
@@ -179,6 +197,8 @@ export default function App() {
   const [selectedStatuses, setSelectedStatuses] = React.useState<Booking['status'][]>(['pending', 'confirmed', 'completed', 'cancelled']);
   const [selectedLocations, setSelectedLocations] = React.useState<Location[]>(LOCATIONS);
   const [showProspects, setShowProspects] = React.useState(false);
+  const [showReminders, setShowReminders] = React.useState(false);
+  const [selectedBooking, setSelectedBooking] = React.useState<Booking | null>(null);
 
   const filteredBookings = React.useMemo(() => {
     const filtered = bookings.filter(booking => {
@@ -240,13 +260,34 @@ export default function App() {
     setShowAddModal(true);
   };
 
+  const totalReminders = React.useMemo(() => {
+    return bookings.reduce((count, booking) => 
+      count + (booking.reminders?.length || 0), 0
+    );
+  }, [bookings]);
+
+  const handleUpdateReminder = (bookingId: string, reminderId: string, completed: boolean) => {
+    setBookings(prev => prev.map(booking => {
+      if (booking.id !== bookingId) return booking;
+      
+      return {
+        ...booking,
+        reminders: (booking.reminders || []).map(reminder => 
+          reminder.id === reminderId 
+            ? { ...reminder, completed }
+            : reminder
+        )
+      };
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex">
       <Sidebar
         selectedServices={selectedServices}
         onServiceChange={setSelectedServices}
         selectedStatuses={selectedStatuses}
-        onStatusChange={setSelectedStatuses}
+        onStatusChange={(statuses) => setSelectedStatuses(statuses as Booking['status'][])}
         onLocationChange={setSelectedLocations}
         bookings={bookings}
       />
@@ -261,6 +302,8 @@ export default function App() {
             onViewModeChange={setViewMode}
             onAddBooking={() => handleAddBookingClick()}
             onToggleProspects={() => setShowProspects(!showProspects)}
+            onOpenReminders={() => setShowReminders(true)}
+            remindersCount={totalReminders}
           />
         </div>
         {viewMode === 'agenda' ? (
@@ -298,6 +341,25 @@ export default function App() {
         isExpanded={showProspects}
         onToggle={() => setShowProspects(!showProspects)}
       />
+
+      <RemindersPane
+        isOpen={showReminders}
+        onClose={() => setShowReminders(false)}
+        bookings={bookings}
+        onBookingClick={(booking) => {
+          setSelectedBooking(booking);
+        }}
+        onUpdateReminder={handleUpdateReminder}
+      />
+
+      {selectedBooking && (
+        <BookingModal
+          booking={selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          onEdit={handleUpdateBooking}
+          onDelete={handleDeleteBooking}
+        />
+      )}
     </div>
   );
 }

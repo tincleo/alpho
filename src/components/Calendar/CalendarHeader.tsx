@@ -12,6 +12,8 @@ interface CalendarHeaderProps {
   onViewModeChange: (mode: ViewMode) => void;
   onAddBooking: () => void;
   onToggleProspects: () => void;
+  onOpenReminders: () => void;
+  remindersCount: number;
 }
 
 export function CalendarHeader({
@@ -23,6 +25,8 @@ export function CalendarHeader({
   onViewModeChange,
   onAddBooking,
   onToggleProspects,
+  onOpenReminders,
+  remindersCount,
 }: CalendarHeaderProps) {
   const [showViewSelector, setShowViewSelector] = React.useState(false);
 
@@ -124,11 +128,16 @@ export function CalendarHeader({
           </div>
 
           <button
-            onClick={() => {}}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            aria-label="Notifications"
+            onClick={onOpenReminders}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative"
+            aria-label="View Reminders"
           >
-            <Bell className="w-5 h-5" />
+            <Bell className="w-5 h-5 text-gray-600" />
+            {remindersCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center">
+                {remindersCount}
+              </span>
+            )}
           </button>
 
           <button
