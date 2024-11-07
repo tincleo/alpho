@@ -1,20 +1,21 @@
 import React from 'react';
-import { ChevronDown, ChevronUp, Plus, X, Bell } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, X, Bell, Check } from 'lucide-react';
 import { Reminder } from '../../types/calendar';
 import { format, startOfDay, isBefore, isSameDay, differenceInDays } from 'date-fns';
 
 interface RemindersAccordionProps {
   reminders: Reminder[];
   onChange: (reminders: Reminder[]) => void;
+  onComplete?: (reminderId: string, completed: boolean) => void;
 }
 
 const MAX_REMINDERS = 5;
 
-export function RemindersAccordion({ reminders, onChange }: RemindersAccordionProps) {
+export function RemindersAccordion({ reminders, onChange, onComplete }: RemindersAccordionProps) {
   const [isOpen, setIsOpen] = React.useState(true);
   const [showDatePicker, setShowDatePicker] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState(format(new Date(), "yyyy-MM-dd"));
-  const addButtonRef = React.useRef<HTMLButtonElement>(null);
+  const [note, setNote] = React.useState('');
   const dateInputRef = React.useRef<HTMLInputElement>(null);
 
   const hasReachedLimit = reminders.length >= MAX_REMINDERS;
@@ -62,6 +63,8 @@ export function RemindersAccordion({ reminders, onChange }: RemindersAccordionPr
     const newReminder: Reminder = {
       id: Math.random().toString(36).substr(2, 9),
       datetime: selectedDateTime.toISOString(),
+      note: note.trim(),
+      completed: false
     };
     
     // Add new reminder and sort
@@ -71,6 +74,7 @@ export function RemindersAccordion({ reminders, onChange }: RemindersAccordionPr
     
     onChange(updatedReminders);
     setShowDatePicker(false);
+    setNote(''); // Reset note for next reminder
   };
 
   const deleteReminder = (id: string) => {
@@ -183,6 +187,20 @@ export function RemindersAccordion({ reminders, onChange }: RemindersAccordionPr
                     key={reminder.id}
                     className="flex items-center gap-3 px-3 py-2 relative hover:bg-gray-50 transition-colors"
                   >
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onComplete?.(reminder.id, !reminder.completed);
+                      }}
+                      className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                        reminder.completed 
+                          ? 'bg-blue-500 border-blue-500 text-white' 
+                          : 'border-gray-300 hover:border-blue-500'
+                      }`}
+                    >
+                      {reminder.completed && <Check className="w-3 h-3" />}
+                    </button>
                     <input
                       type="date"
                       value={format(new Date(reminder.datetime), "yyyy-MM-dd")}
@@ -190,8 +208,15 @@ export function RemindersAccordion({ reminders, onChange }: RemindersAccordionPr
                       min={format(today, "yyyy-MM-dd")}
                       className="reminder-date-input absolute left-0 top-0 opacity-0 w-full h-full cursor-pointer"
                     />
-                    <span className="flex-1 text-sm text-gray-900">
+                    <span className={`flex-1 text-sm ${
+                      reminder.completed ? 'text-gray-400 line-through' : 'text-gray-900'
+                    }`}>
                       {formatReminderDate(new Date(reminder.datetime))}
+                      {reminder.note && (
+                        <span className="block text-xs text-gray-500 mt-0.5">
+                          {reminder.note}
+                        </span>
+                      )}
                     </span>
                     <button
                       type="button"
@@ -211,7 +236,6 @@ export function RemindersAccordion({ reminders, onChange }: RemindersAccordionPr
           
           <button
             type="button"
-            ref={addButtonRef}
             onClick={openDatePicker}
             disabled={hasReachedLimit}
             className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
@@ -233,32 +257,51 @@ export function RemindersAccordion({ reminders, onChange }: RemindersAccordionPr
           <div className="relative min-h-screen flex items-center justify-center p-4">
             <div className="relative bg-white rounded-lg shadow-lg w-full max-w-sm">
               <div className="p-4 space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Select date
-                  </label>
-                  <div 
-                    className="relative"
-                    onClick={() => dateInputRef.current?.showPicker()}
-                  >
-                    <input
-                      ref={dateInputRef}
-                      type="date"
-                      value={selectedDate}
-                      min={format(today, "yyyy-MM-dd")}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
-                    />
-                    <div className="absolute inset-0" />
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Select date
+                    </label>
+                    <div 
+                      className="relative"
+                      onClick={() => dateInputRef.current?.showPicker()}
+                    >
+                      <input
+                        ref={dateInputRef}
+                        type="date"
+                        value={selectedDate}
+                        min={format(today, "yyyy-MM-dd")}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+                      />
+                      <div className="absolute inset-0" />
+                    </div>
+                    <p className="mt-2 text-sm text-gray-600">
+                      {getReminderMessage(selectedDate)}
+                    </p>
                   </div>
-                  <p className="mt-2 text-sm text-gray-600">
-                    {getReminderMessage(selectedDate)}
-                  </p>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Note (optional)
+                    </label>
+                    <textarea
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      rows={2}
+                      placeholder="Add a note for this reminder..."
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                  </div>
                 </div>
+
                 <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
                   <button
                     type="button"
-                    onClick={() => setShowDatePicker(false)}
+                    onClick={() => {
+                      setShowDatePicker(false);
+                      setNote('');
+                    }}
                     className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
                   >
                     Cancel

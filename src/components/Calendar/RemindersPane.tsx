@@ -134,10 +134,10 @@ export function RemindersPane({ isOpen, onClose, bookings, onBookingClick, onUpd
           {displayReminders.length > 0 ? (
             <div className="space-y-3">
               {displayReminders.map((reminder) => (
-                <button
+                <div
                   key={reminder.id}
                   onClick={() => onBookingClick(reminder.booking)}
-                  className="w-full text-left group"
+                  className="w-full text-left group cursor-pointer"
                 >
                   <div className="bg-white border rounded-lg p-3 hover:border-blue-500 transition-colors">
                     <div className="text-sm font-medium text-gray-900 mb-2">
@@ -145,40 +145,43 @@ export function RemindersPane({ isOpen, onClose, bookings, onBookingClick, onUpd
                     </div>
                     
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <span className="font-medium">
-                          {reminder.booking.services.map(s => SERVICE_TYPES[s.type]).join(', ')}
-                        </span>
-                        •
-                        <span>{reminder.booking.location}</span>
+                      <div className="text-sm text-gray-600">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium">
+                            {reminder.booking.services.map(s => SERVICE_TYPES[s.type]).join(', ')}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span>{reminder.booking.location}</span>
+                          •
+                          <span className={`px-2 py-0.5 rounded-full text-xs flex items-center gap-1 ${
+                            priorityColors[reminder.booking.priority]
+                          }`}>
+                            <Flag className="w-3 h-3" />
+                            {reminder.booking.priority.charAt(0).toUpperCase() + reminder.booking.priority.slice(1)}
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded-full text-xs ${
-                          statusColors[reminder.booking.status]
-                        }`}>
-                          {reminder.booking.status.charAt(0).toUpperCase() + reminder.booking.status.slice(1)}
-                        </span>
+                      {reminder.note && (
+                        <div className="text-xs text-gray-500 mt-1 line-clamp-2">
+                          {reminder.note}
+                        </div>
+                      )}
 
-                        <span className={`px-2 py-0.5 rounded-full text-xs flex items-center gap-1 ${
-                          priorityColors[reminder.booking.priority]
-                        }`}>
-                          <Flag className="w-3 h-3" />
-                          {reminder.booking.priority.charAt(0).toUpperCase() + reminder.booking.priority.slice(1)}
-                        </span>
-
-                        {activeTab === 'open' && (
+                      {activeTab === 'open' && (
+                        <div className="flex justify-end">
                           <button
                             onClick={(e) => handleCompleteReminder(reminder, e)}
-                            className="ml-auto p-1 hover:bg-green-50 rounded-lg transition-colors text-green-600"
+                            className="p-1 hover:bg-green-50 rounded-lg transition-colors text-green-600"
                           >
                             <Check className="w-4 h-4" />
                           </button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           ) : (
