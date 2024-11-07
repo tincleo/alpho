@@ -33,6 +33,7 @@ export interface Reminder {
   id: string;
   datetime: string;
   completed?: boolean;
+  note?: string;
 }
 
 export interface Booking {

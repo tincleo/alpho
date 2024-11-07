@@ -82,7 +82,7 @@ export function RemindersPane({ isOpen, onClose, bookings, onBookingClick, onUpd
 
   const handleCompleteReminder = (reminder: ReminderWithBooking, e: React.MouseEvent) => {
     e.stopPropagation();
-    onUpdateReminder(reminder.booking.id, reminder.id, true);
+    onUpdateReminder(reminder.booking.id, reminder.id, !reminder.completed);
   };
 
   const displayReminders = activeTab === 'open' ? openReminders : completedRemindersList;

@@ -11,6 +11,7 @@ interface BookingModalProps {
   onClose: () => void;
   onEdit: (booking: Booking) => void;
   onDelete: (bookingId: string) => void;
+  onUpdateReminder?: (bookingId: string, reminderId: string, completed: boolean) => void;
 }
 
 const statusColors = {
@@ -26,7 +27,7 @@ const priorityColors = {
   high: 'bg-red-50 text-red-800'
 };
 
-export function BookingModal({ booking, onClose, onEdit, onDelete }: BookingModalProps) {
+export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateReminder }: BookingModalProps) {
   const [showEditModal, setShowEditModal] = React.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const deleteButtonRef = React.useRef<HTMLButtonElement>(null);
@@ -49,6 +50,21 @@ export function BookingModal({ booking, onClose, onEdit, onDelete }: BookingModa
       reminders,
     });
     onClose();
+  };
+
+  const handleRemindersChange = (updatedReminders: Reminder[]) => {
+    setReminders(updatedReminders);
+    onEdit({
+      ...booking,
+      reminders: updatedReminders
+    });
+  };
+
+  const handleReminderComplete = (reminderId: string, completed: boolean) => {
+    onUpdateReminder?.(booking.id, reminderId, completed);
+    setReminders(prev => prev.map(reminder => 
+      reminder.id === reminderId ? { ...reminder, completed } : reminder
+    ));
   };
 
   return (
@@ -78,7 +94,11 @@ export function BookingModal({ booking, onClose, onEdit, onDelete }: BookingModa
           <div className="space-y-4">
             <RemindersAccordion
               reminders={reminders}
-              onChange={setReminders}
+              onChange={handleRemindersChange}
+              onComplete={(reminderId, completed) => {
+                handleReminderComplete(reminderId, completed);
+              }}
+              bookingId={booking.id}
             />
 
             <div>

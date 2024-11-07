@@ -7,11 +7,17 @@ interface RemindersAccordionProps {
   reminders: Reminder[];
   onChange: (reminders: Reminder[]) => void;
   onComplete?: (reminderId: string, completed: boolean) => void;
+  bookingId: string;
 }
 
 const MAX_REMINDERS = 5;
 
-export function RemindersAccordion({ reminders, onChange, onComplete }: RemindersAccordionProps) {
+export function RemindersAccordion({ 
+  reminders, 
+  onChange, 
+  onComplete,
+  bookingId 
+}: RemindersAccordionProps) {
   const [isOpen, setIsOpen] = React.useState(true);
   const [showDatePicker, setShowDatePicker] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState(format(new Date(), "yyyy-MM-dd"));
@@ -75,6 +81,11 @@ export function RemindersAccordion({ reminders, onChange, onComplete }: Reminder
     onChange(updatedReminders);
     setShowDatePicker(false);
     setNote(''); // Reset note for next reminder
+  };
+
+  const handleComplete = (reminderId: string, completed: boolean, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onComplete?.(reminderId, completed);
   };
 
   const deleteReminder = (id: string) => {
@@ -189,10 +200,7 @@ export function RemindersAccordion({ reminders, onChange, onComplete }: Reminder
                   >
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onComplete?.(reminder.id, !reminder.completed);
-                      }}
+                      onClick={(e) => handleComplete(reminder.id, !reminder.completed, e)}
                       className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
                         reminder.completed 
                           ? 'bg-blue-500 border-blue-500 text-white' 

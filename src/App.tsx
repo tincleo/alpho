@@ -19,8 +19,8 @@ const SAMPLE_BOOKINGS: Booking[] = [
     location: 'Bastos',
     address: '123 Avenue Kennedy',
     phone: '677 88 99 00',
-    datetime: new Date(2024, 10, 5, 9, 0).toISOString(),
-    endTime: new Date(2024, 10, 5, 11, 0).toISOString(),
+    datetime: new Date(2024, 10, 15, 9, 0).toISOString(),
+    endTime: new Date(2024, 10, 15, 11, 0).toISOString(),
     status: 'confirmed',
     priority: 'high',
     name: 'Jean Michel',
@@ -29,7 +29,15 @@ const SAMPLE_BOOKINGS: Booking[] = [
     reminders: [
       {
         id: 'r1',
-        datetime: new Date(2024, 10, 3).toISOString(),
+        datetime: new Date(2024, 10, 13).toISOString(),
+        note: 'Call to confirm appointment time',
+        completed: false
+      },
+      {
+        id: 'r2',
+        datetime: new Date(2024, 10, 14).toISOString(),
+        note: 'Send location details',
+        completed: false
       }
     ]
   },
@@ -41,19 +49,23 @@ const SAMPLE_BOOKINGS: Booking[] = [
     location: 'Mvan',
     address: '45 Rue des Manguiers',
     phone: '699 00 11 22',
-    datetime: new Date(2024, 10, 8).toISOString(),
+    datetime: new Date(2024, 10, 20).toISOString(),
     status: 'pending',
     priority: 'medium',
     name: 'Marie Claire',
     notes: 'Interested in carpet cleaning service, needs price quote',
     reminders: [
       {
-        id: 'r2',
-        datetime: new Date(2024, 10, 6).toISOString(),
+        id: 'r3',
+        datetime: new Date(2024, 10, 18).toISOString(),
+        note: 'Send price quotation',
+        completed: false
       },
       {
-        id: 'r3',
-        datetime: new Date(2024, 10, 7).toISOString(),
+        id: 'r4',
+        datetime: new Date(2024, 10, 19).toISOString(),
+        note: 'Follow up on quotation',
+        completed: false
       }
     ]
   },
@@ -358,6 +370,7 @@ export default function App() {
           onClose={() => setSelectedBooking(null)}
           onEdit={handleUpdateBooking}
           onDelete={handleDeleteBooking}
+          onUpdateReminder={handleUpdateReminder}
         />
       )}
     </div>
