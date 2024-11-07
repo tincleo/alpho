@@ -110,7 +110,7 @@ export function RemindersPane({ isOpen, onClose, bookings, onBookingClick, onUpd
         <div className="flex border-b">
           <button
             onClick={() => setActiveTab('open')}
-            className={`flex-1 px-4 py-3 text-sm font-medium ${
+            className={`flex-1 px-4 py-2.5 text-sm font-medium ${
               activeTab === 'open' 
                 ? 'text-blue-600 border-b-2 border-blue-600' 
                 : 'text-gray-500 hover:text-gray-700'
@@ -120,7 +120,7 @@ export function RemindersPane({ isOpen, onClose, bookings, onBookingClick, onUpd
           </button>
           <button
             onClick={() => setActiveTab('completed')}
-            className={`flex-1 px-4 py-3 text-sm font-medium ${
+            className={`flex-1 px-4 py-2.5 text-sm font-medium ${
               activeTab === 'completed' 
                 ? 'text-blue-600 border-b-2 border-blue-600' 
                 : 'text-gray-500 hover:text-gray-700'
@@ -130,56 +130,49 @@ export function RemindersPane({ isOpen, onClose, bookings, onBookingClick, onUpd
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto">
           {displayReminders.length > 0 ? (
-            <div className="space-y-3">
+            <div className="divide-y divide-gray-100">
               {displayReminders.map((reminder) => (
                 <div
                   key={reminder.id}
                   onClick={() => onBookingClick(reminder.booking)}
-                  className="w-full text-left group cursor-pointer"
+                  className="w-full text-left group cursor-pointer hover:bg-gray-50"
                 >
-                  <div className="bg-white border rounded-lg p-3 hover:border-blue-500 transition-colors">
-                    <div className="text-sm font-medium text-gray-900 mb-2">
+                  <div className="px-4 py-2.5">
+                    <div className="text-sm font-medium text-gray-900 mb-1">
                       {formatReminderDate(new Date(reminder.datetime))}
                     </div>
                     
-                    <div className="space-y-2">
-                      <div className="text-sm text-gray-600">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">
-                            {reminder.booking.services.map(s => SERVICE_TYPES[s.type]).join(', ')}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span>{reminder.booking.location}</span>
-                          •
-                          <span className={`px-2 py-0.5 rounded-full text-xs flex items-center gap-1 ${
-                            priorityColors[reminder.booking.priority]
-                          }`}>
-                            <Flag className="w-3 h-3" />
-                            {reminder.booking.priority.charAt(0).toUpperCase() + reminder.booking.priority.slice(1)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {reminder.note && (
-                        <div className="text-xs text-gray-500 mt-1 line-clamp-2">
-                          {reminder.note}
-                        </div>
-                      )}
-
-                      {activeTab === 'open' && (
-                        <div className="flex justify-end">
-                          <button
-                            onClick={(e) => handleCompleteReminder(reminder, e)}
-                            className="p-1 hover:bg-green-50 rounded-lg transition-colors text-green-600"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
+                    <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                      <span className="font-medium">
+                        {reminder.booking.services.map(s => SERVICE_TYPES[s.type]).join(', ')}
+                      </span>
+                      <span>•</span>
+                      <span>{reminder.booking.location}</span>
+                      <span>•</span>
+                      <span className={`px-1.5 py-0.5 rounded-full flex items-center gap-1 ${
+                        priorityColors[reminder.booking.priority]
+                      }`}>
+                        <Flag className="w-2.5 h-2.5" />
+                        {reminder.booking.priority.charAt(0).toUpperCase() + reminder.booking.priority.slice(1)}
+                      </span>
                     </div>
+
+                    {reminder.note && (
+                      <div className="text-xs text-gray-500 mt-1 line-clamp-1">
+                        {reminder.note}
+                      </div>
+                    )}
+
+                    {activeTab === 'open' && (
+                      <button
+                        onClick={(e) => handleCompleteReminder(reminder, e)}
+                        className="absolute top-2.5 right-3 p-1 hover:bg-green-50 rounded-lg transition-colors text-green-600 opacity-0 group-hover:opacity-100"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
