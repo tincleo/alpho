@@ -142,14 +142,51 @@ export async function updateReminder(
   reminderId: string,
   completed: boolean
 ) {
-  const { error } = await supabase
-    .from('reminders')
-    .update({ completed })
-    .eq('id', reminderId)
-    .eq('prospect_id', prospectId);
+  // If the reminder has a temporary ID, we need to create it first
+  if (reminderId.startsWith('temp_')) {
+    // Get the reminder details from the prospect
+    const { data: prospect } = await supabase
+      .from('prospects')
+      .select('reminders (*)')
+      .eq('id', prospectId)
+      .single();
 
-  if (error) throw error;
+    const tempReminder = prospect?.reminders?.find(r => r.id === reminderId);
+    
+    if (!tempReminder) {
+      throw new Error('Reminder not found');
+    }
 
+    // Create a new reminder with a proper UUID
+    const { error: insertError } = await supabase
+      .from('reminders')
+      .insert({
+        id: generateUUID(),
+        prospect_id: prospectId,
+        datetime: tempReminder.datetime,
+        note: tempReminder.note || '',
+        completed: completed // Use the new completed status
+      });
+
+    if (insertError) {
+      console.error('Error creating reminder:', insertError);
+      throw insertError;
+    }
+  } else {
+    // For existing reminders, just update the completed status
+    const { error } = await supabase
+      .from('reminders')
+      .update({ completed })
+      .eq('id', reminderId)
+      .eq('prospect_id', prospectId);
+
+    if (error) {
+      console.error('Error updating reminder:', error);
+      throw error;
+    }
+  }
+
+  // Return the updated bookings
   return fetchBookings();
 }
 

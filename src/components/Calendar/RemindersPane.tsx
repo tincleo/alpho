@@ -73,9 +73,12 @@ export function RemindersPane({ isOpen, onClose, bookings, onBookingClick, onUpd
     return `${format(date, "EEEE, dd MMMM")} (${daysText})`;
   };
 
-  const handleCompleteReminder = (reminder: ReminderWithBooking, e: React.MouseEvent) => {
-    e.stopPropagation();
-    onUpdateReminder(reminder.booking.id, reminder.id, !reminder.completed);
+  const handleReminderComplete = async (reminder: ReminderWithBooking) => {
+    try {
+      await onUpdateReminder(reminder.booking.id, reminder.id, !reminder.completed);
+    } catch (error) {
+      console.error('Failed to update reminder:', error);
+    }
   };
 
   const displayReminders = activeTab === 'open' ? openReminders : completedRemindersList;
@@ -161,7 +164,10 @@ export function RemindersPane({ isOpen, onClose, bookings, onBookingClick, onUpd
                     {activeTab === 'open' && (
                       <div className="absolute right-4 top-1/2 -translate-y-1/2">
                         <button
-                          onClick={(e) => handleCompleteReminder(reminder, e)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReminderComplete(reminder);
+                          }}
                           className="p-1.5 hover:bg-green-50 rounded-lg transition-colors text-green-600 opacity-0 group-hover:opacity-100"
                         >
                           <Check className="w-4 h-4" />

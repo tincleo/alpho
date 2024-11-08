@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, Clock, MapPin, Phone, User, Flag, AlertTriangle } from 'lucide-react';
+import { X, Calendar, Clock, MapPin, Phone, User, Flag, AlertTriangle, MessageCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { Booking, Reminder } from '../../types/calendar';
 import { ServiceTypeSelector } from './ServiceTypeSelector';
@@ -11,7 +11,7 @@ interface BookingModalProps {
   onClose: () => void;
   onEdit: (booking: Booking) => Promise<void>;
   onDelete: (bookingId: string) => Promise<void>;
-  onUpdateReminder?: (bookingId: string, reminderId: string, completed: boolean) => Promise<void>;
+  onUpdateReminder: (prospectId: string, reminderId: string, completed: boolean) => Promise<void>;
 }
 
 const statusColors = {
@@ -33,6 +33,23 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
   const [reminders, setReminders] = React.useState<Reminder[]>(booking.reminders || []);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [showPhoneMenu, setShowPhoneMenu] = React.useState(false);
+  const phoneMenuRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    setReminders(booking.reminders || []);
+  }, [booking.reminders]);
+
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (phoneMenuRef.current && !phoneMenuRef.current.contains(event.target as Node)) {
+        setShowPhoneMenu(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleEdit = async (updatedBooking: Omit<Booking, 'id'>) => {
     try {
@@ -66,10 +83,7 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
   };
 
   const handleRemindersChange = async (updatedReminders: Reminder[]) => {
-    // Only update if reminders actually changed
-    if (JSON.stringify(updatedReminders) === JSON.stringify(reminders)) {
-      return;
-    }
+    setReminders(updatedReminders);
 
     try {
       setIsLoading(true);
@@ -77,8 +91,8 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
         ...booking,
         reminders: updatedReminders
       });
-      setReminders(updatedReminders);
     } catch (err: unknown) {
+      setReminders(booking.reminders || []);
       console.error('Failed to update reminders:', err);
       setError(`Failed to update reminders: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
@@ -89,15 +103,35 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
   const handleReminderComplete = async (reminderId: string, completed: boolean) => {
     try {
       setIsLoading(true);
-      await onUpdateReminder?.(booking.id, reminderId, completed);
+      
       setReminders(prev => prev.map(reminder => 
         reminder.id === reminderId ? { ...reminder, completed } : reminder
       ));
-    } catch {
-      setError('Failed to update reminder');
+
+      await onUpdateReminder(booking.id, reminderId, completed);
+    } catch (error) {
+      setReminders(prev => prev.map(reminder => 
+        reminder.id === reminderId ? { ...reminder, completed: !completed } : reminder
+      ));
+      console.error('Failed to update reminder:', error);
+      setError('Failed to update reminder status');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCall = () => {
+    window.location.href = `tel:${booking.phone}`;
+    setShowPhoneMenu(false);
+  };
+
+  const handleWhatsApp = () => {
+    // Add Cameroon country code (+237) if not present
+    const phoneNumber = booking.phone.startsWith('+237') 
+      ? booking.phone.replace(/\s/g, '') 
+      : '+237' + booking.phone.replace(/\s/g, '');
+    window.open(`https://wa.me/${phoneNumber}`, '_blank');
+    setShowPhoneMenu(false);
   };
 
   if (error) {
@@ -146,6 +180,7 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
           <div className="space-y-4">
             {/* Reminders */}
             <RemindersAccordion
+              bookingId={booking.id}
               reminders={reminders}
               onChange={handleRemindersChange}
               onComplete={handleReminderComplete}
@@ -202,9 +237,36 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
 
             {/* Contact Info */}
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-gray-600">
-                <Phone className="w-4 h-4" />
-                <span>{booking.phone}</span>
+              <div className="relative">
+                <button
+                  onClick={() => setShowPhoneMenu(!showPhoneMenu)}
+                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+                >
+                  <Phone className="w-4 h-4 group-hover:text-blue-500" />
+                  <span className="group-hover:text-blue-500">{booking.phone}</span>
+                </button>
+
+                {showPhoneMenu && (
+                  <div 
+                    ref={phoneMenuRef}
+                    className="absolute left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
+                  >
+                    <button
+                      onClick={handleCall}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                    >
+                      <Phone className="w-4 h-4" />
+                      Call
+                    </button>
+                    <button
+                      onClick={handleWhatsApp}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      WhatsApp
+                    </button>
+                  </div>
+                )}
               </div>
 
               {(booking.location || booking.address) && (

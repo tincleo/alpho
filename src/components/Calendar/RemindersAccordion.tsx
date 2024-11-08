@@ -2,17 +2,20 @@ import React from 'react';
 import { ChevronDown, ChevronUp, Plus, X, Bell, Check } from 'lucide-react';
 import { Reminder } from '../../types/calendar';
 import { format, startOfDay, isBefore, isSameDay, differenceInDays } from 'date-fns';
+import { useReminders } from '../../hooks/useReminders';
 
 interface RemindersAccordionProps {
+  bookingId: string;
   reminders: Reminder[];
   onChange: (reminders: Reminder[]) => void;
-  onComplete?: (reminderId: string, completed: boolean) => void;
+  onComplete: (reminderId: string, completed: boolean) => Promise<void>;
 }
 
 const MAX_REMINDERS = 5;
 
 export function RemindersAccordion({ 
-  reminders, 
+  bookingId,
+  reminders: initialReminders, 
   onChange, 
   onComplete 
 }: RemindersAccordionProps) {
@@ -21,12 +24,19 @@ export function RemindersAccordion({
   const [selectedDate, setSelectedDate] = React.useState(format(new Date(), "yyyy-MM-dd"));
   const [note, setNote] = React.useState('');
   const dateInputRef = React.useRef<HTMLInputElement>(null);
-  const [localReminders, setLocalReminders] = React.useState<Reminder[]>(reminders);
-
-  // Keep local reminders in sync with prop reminders
-  React.useEffect(() => {
-    setLocalReminders(reminders);
-  }, [reminders]);
+  const {
+    reminders: localReminders,
+    setReminders: setLocalReminders,
+    handleComplete
+  } = useReminders({
+    bookingId,
+    initialReminders,
+    onBookingsChange: async (reminderId: string, completed: boolean) => {
+      if (onComplete) {
+        await onComplete(reminderId, completed);
+      }
+    }
+  });
 
   const hasReachedLimit = localReminders.length >= MAX_REMINDERS;
 
@@ -85,18 +95,24 @@ export function RemindersAccordion({
       new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
     );
     
+    // Update local state immediately
+    setLocalReminders(updatedReminders);
+    
+    // Trigger the change
     onChange(updatedReminders);
+    
+    // Reset UI state
     setShowDatePicker(false);
-    setNote(''); // Reset note for next reminder
-  };
-
-  const handleComplete = (reminderId: string, completed: boolean, e: React.MouseEvent) => {
-    e.stopPropagation();
-    onComplete?.(reminderId, completed);
+    setNote('');
   };
 
   const deleteReminder = (id: string) => {
-    onChange(localReminders.filter(reminder => reminder.id !== id));
+    // Update local state immediately
+    const updatedReminders = localReminders.filter(reminder => reminder.id !== id);
+    setLocalReminders(updatedReminders);
+    
+    // Trigger the change
+    onChange(updatedReminders);
   };
 
   const updateReminderDateTime = (id: string, dateStr: string) => {
@@ -105,12 +121,12 @@ export function RemindersAccordion({
     const today = startOfDay(new Date());
 
     if (isBefore(selectedDate, today)) {
-      return; // Don't update if selected date is before today
+      return;
     }
 
     // Check if another reminder already exists for this date
     const hasExistingReminder = localReminders.some(reminder => 
-      reminder.id !== id && // Exclude current reminder from check
+      reminder.id !== id && 
       isSameDay(new Date(reminder.datetime), selectedDate)
     );
 
@@ -127,6 +143,10 @@ export function RemindersAccordion({
       } : reminder
     ).sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime());
 
+    // Update local state immediately
+    setLocalReminders(updatedReminders);
+    
+    // Trigger the change
     onChange(updatedReminders);
   };
 
@@ -215,7 +235,10 @@ export function RemindersAccordion({
                   >
                     <button
                       type="button"
-                      onClick={(e) => handleComplete(reminder.id, !reminder.completed, e)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleComplete(reminder.id, !reminder.completed);
+                      }}
                       className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
                         reminder.completed 
                           ? 'bg-blue-500 border-blue-500 text-white' 
@@ -224,30 +247,36 @@ export function RemindersAccordion({
                     >
                       {reminder.completed && <Check className="w-3 h-3" />}
                     </button>
-                    <input
-                      type="date"
-                      value={format(new Date(reminder.datetime), "yyyy-MM-dd")}
-                      onChange={(e) => updateReminderDateTime(reminder.id, e.target.value)}
-                      min={format(today, "yyyy-MM-dd")}
-                      className="reminder-date-input absolute left-0 top-0 opacity-0 w-full h-full cursor-pointer"
-                    />
-                    <span className={`flex-1 text-sm ${
-                      reminder.completed ? 'text-gray-400 line-through' : 'text-gray-900'
-                    }`}>
-                      {formatReminderDate(new Date(reminder.datetime))}
+
+                    <div className="flex-1 min-w-0">
+                      <div className="relative">
+                        <input
+                          type="date"
+                          value={format(new Date(reminder.datetime), "yyyy-MM-dd")}
+                          onChange={(e) => updateReminderDateTime(reminder.id, e.target.value)}
+                          min={format(today, "yyyy-MM-dd")}
+                          className="absolute inset-0 opacity-0 cursor-pointer w-full"
+                        />
+                        <span className={`block text-sm ${
+                          reminder.completed ? 'text-gray-400 line-through' : 'text-gray-900'
+                        }`}>
+                          {formatReminderDate(new Date(reminder.datetime))}
+                        </span>
+                      </div>
                       {reminder.note && (
-                        <span className="block text-xs text-gray-500 mt-0.5">
+                        <span className="block text-xs text-gray-500 mt-0.5 truncate">
                           {reminder.note}
                         </span>
                       )}
-                    </span>
+                    </div>
+
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteReminder(reminder.id);
                       }}
-                      className="p-1 hover:bg-gray-100 rounded-lg transition-colors relative z-10"
+                      className="p-1 hover:bg-gray-100 rounded-lg transition-colors z-10"
                     >
                       <X className="w-4 h-4 text-gray-500" />
                     </button>

@@ -3,15 +3,24 @@ import { format, isToday } from 'date-fns';
 import { Booking } from '../../types/calendar';
 import { BookingPreview } from './BookingPreview';
 import { BookingModal } from './BookingModal';
+import { updateReminder } from '../../lib/api';
+import { X } from 'lucide-react';
 
 interface AgendaViewProps {
   bookings: Booking[];
   onUpdateBooking: (booking: Booking) => Promise<void>;
-  onDeleteBooking?: (bookingId: string) => void;
+  onDeleteBooking: (bookingId: string) => Promise<void>;
+  onBookingsChange?: () => void;
 }
 
-export function AgendaView({ bookings, onUpdateBooking, onDeleteBooking }: AgendaViewProps) {
+export function AgendaView({ 
+  bookings, 
+  onUpdateBooking, 
+  onDeleteBooking, 
+  onBookingsChange 
+}: AgendaViewProps) {
   const [selectedBooking, setSelectedBooking] = React.useState<Booking | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
 
   const groupedBookings = React.useMemo(() => {
     const sorted = [...bookings]
@@ -34,6 +43,34 @@ export function AgendaView({ bookings, onUpdateBooking, onDeleteBooking }: Agend
       ),
     }));
   }, [bookings]);
+
+  const handleUpdateReminder = async (prospectId: string, reminderId: string, completed: boolean) => {
+    try {
+      const updatedBookings = await updateReminder(prospectId, reminderId, completed);
+      // Update the selected booking with the new data
+      const updatedBooking = updatedBookings.find(b => b.id === prospectId);
+      if (updatedBooking) {
+        setSelectedBooking(updatedBooking);
+      }
+      // Notify parent to refresh data
+      onBookingsChange?.();
+    } catch (error) {
+      console.error('Failed to update reminder:', error);
+      setError(error instanceof Error ? error.message : 'Failed to update reminder');
+      throw error;
+    }
+  };
+
+  const handleDeleteBooking = async (bookingId: string) => {
+    try {
+      await onDeleteBooking(bookingId);
+      setSelectedBooking(null);
+      onBookingsChange?.();
+    } catch (error) {
+      console.error('Failed to delete booking:', error);
+      throw error;
+    }
+  };
 
   if (groupedBookings.length === 0) {
     return (
@@ -73,8 +110,21 @@ export function AgendaView({ bookings, onUpdateBooking, onDeleteBooking }: Agend
           booking={selectedBooking}
           onClose={() => setSelectedBooking(null)}
           onEdit={onUpdateBooking}
-          onDelete={onDeleteBooking ? (bookingId: string) => onDeleteBooking(bookingId) : undefined}
+          onDelete={handleDeleteBooking}
+          onUpdateReminder={handleUpdateReminder}
         />
+      )}
+
+      {error && (
+        <div className="fixed bottom-4 right-4 bg-red-50 text-red-600 px-4 py-2 rounded-lg shadow-lg">
+          <div className="text-sm">{error}</div>
+          <button 
+            onClick={() => setError(null)}
+            className="absolute top-1 right-1 p-1 hover:bg-red-100 rounded-full"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       )}
     </div>
   );
