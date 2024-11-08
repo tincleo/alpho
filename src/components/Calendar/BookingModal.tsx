@@ -9,9 +9,9 @@ import { RemindersAccordion } from './RemindersAccordion';
 interface BookingModalProps {
   booking: Booking;
   onClose: () => void;
-  onEdit: (booking: Booking) => void;
-  onDelete: (bookingId: string) => void;
-  onUpdateReminder?: (bookingId: string, reminderId: string, completed: boolean) => void;
+  onEdit: (booking: Booking) => Promise<void>;
+  onDelete: (bookingId: string) => Promise<void>;
+  onUpdateReminder?: (bookingId: string, reminderId: string, completed: boolean) => Promise<void>;
 }
 
 const statusColors = {
@@ -30,47 +30,98 @@ const priorityColors = {
 export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateReminder }: BookingModalProps) {
   const [showEditModal, setShowEditModal] = React.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
-  const deleteButtonRef = React.useRef<HTMLButtonElement>(null);
   const [reminders, setReminders] = React.useState<Reminder[]>(booking.reminders || []);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const handleEdit = () => {
-    setShowEditModal(true);
+  const handleEdit = async (updatedBooking: Omit<Booking, 'id'>) => {
+    try {
+      setIsLoading(true);
+      await onEdit({ 
+        ...updatedBooking, 
+        id: booking.id,
+        reminders: reminders,
+        services: booking.services
+      });
+      setShowEditModal(false);
+      onClose();
+    } catch {
+      setError('Failed to update prospect');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDelete = () => {
-    setShowDeleteConfirm(false);
-    onDelete(booking.id);
-    onClose();
+  const handleDelete = async () => {
+    try {
+      setIsLoading(true);
+      await onDelete(booking.id);
+      setShowDeleteConfirm(false);
+      onClose();
+    } catch (err: unknown) {
+      setError(`Failed to delete prospect: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onEdit({
-      ...formData,
-      reminders,
-    });
-    onClose();
+  const handleRemindersChange = async (updatedReminders: Reminder[]) => {
+    // Only update if reminders actually changed
+    if (JSON.stringify(updatedReminders) === JSON.stringify(reminders)) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await onEdit({
+        ...booking,
+        reminders: updatedReminders
+      });
+      setReminders(updatedReminders);
+    } catch (err: unknown) {
+      console.error('Failed to update reminders:', err);
+      setError(`Failed to update reminders: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRemindersChange = (updatedReminders: Reminder[]) => {
-    setReminders(updatedReminders);
-    onEdit({
-      ...booking,
-      reminders: updatedReminders
-    });
+  const handleReminderComplete = async (reminderId: string, completed: boolean) => {
+    try {
+      setIsLoading(true);
+      await onUpdateReminder?.(booking.id, reminderId, completed);
+      setReminders(prev => prev.map(reminder => 
+        reminder.id === reminderId ? { ...reminder, completed } : reminder
+      ));
+    } catch {
+      setError('Failed to update reminder');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleReminderComplete = (reminderId: string, completed: boolean) => {
-    onUpdateReminder?.(booking.id, reminderId, completed);
-    setReminders(prev => prev.map(reminder => 
-      reminder.id === reminderId ? { ...reminder, completed } : reminder
-    ));
-  };
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+          <h3 className="text-red-600 font-medium mb-2">Error</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => setError(null)}
+            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl w-full max-w-lg">
         <div className="p-6 space-y-6">
+          {/* Header */}
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <h2 className="text-xl font-bold text-gray-900">
@@ -86,21 +137,21 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
             <button
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              disabled={isLoading}
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           <div className="space-y-4">
+            {/* Reminders */}
             <RemindersAccordion
               reminders={reminders}
               onChange={handleRemindersChange}
-              onComplete={(reminderId, completed) => {
-                handleReminderComplete(reminderId, completed);
-              }}
-              bookingId={booking.id}
+              onComplete={handleReminderComplete}
             />
 
+            {/* Services */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Services
@@ -117,6 +168,7 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
               />
             </div>
 
+            {/* Status and Priority */}
             <div className="flex flex-wrap gap-2">
               <span className={`px-2.5 py-1 rounded-full text-sm ${statusColors[booking.status]}`}>
                 {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
@@ -134,6 +186,7 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
               )}
             </div>
 
+            {/* Date and Time */}
             {booking.datetime && (
               <div className="flex items-center gap-2 text-gray-600">
                 <Calendar className="w-4 h-4" />
@@ -147,6 +200,7 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
               </div>
             )}
 
+            {/* Contact Info */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-gray-600">
                 <Phone className="w-4 h-4" />
@@ -164,6 +218,7 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
               )}
             </div>
 
+            {/* Notes */}
             {booking.notes && (
               <div className="bg-gray-50 rounded-lg p-3">
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{booking.notes}</p>
@@ -171,12 +226,13 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
             )}
           </div>
 
+          {/* Actions */}
           <div className="flex justify-end gap-2 pt-4 border-t">
             <div className="relative">
               <button
-                ref={deleteButtonRef}
                 onClick={() => setShowDeleteConfirm(true)}
                 className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                disabled={isLoading}
               >
                 Delete
               </button>
@@ -197,6 +253,7 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
                           type="button"
                           onClick={() => setShowDeleteConfirm(false)}
                           className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                          disabled={isLoading}
                         >
                           Cancel
                         </button>
@@ -204,8 +261,9 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
                           type="button"
                           onClick={handleDelete}
                           className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+                          disabled={isLoading}
                         >
-                          Delete
+                          {isLoading ? 'Deleting...' : 'Delete'}
                         </button>
                       </div>
                     </div>
@@ -215,8 +273,9 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
             </div>
             
             <button
-              onClick={handleEdit}
+              onClick={() => setShowEditModal(true)}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+              disabled={isLoading}
             >
               Edit
             </button>
@@ -235,15 +294,7 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
             setShowEditModal(false);
             onClose();
           }}
-          onAdd={(updatedBooking) => {
-            onEdit({ 
-              ...updatedBooking, 
-              id: booking.id,
-              reminders: reminders
-            });
-            setShowEditModal(false);
-            onClose();
-          }}
+          onAdd={handleEdit}
         />
       )}
     </div>

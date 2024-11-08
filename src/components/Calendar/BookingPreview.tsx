@@ -10,6 +10,7 @@ interface BookingPreviewProps {
   onDragStart?: (booking: Booking) => void;
   onDragEnd?: () => void;
   view?: 'week' | 'month' | 'agenda';
+  compact?: boolean;
 }
 
 const SERVICE_TYPES: Record<string, string> = {

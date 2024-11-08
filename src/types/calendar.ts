@@ -1,56 +1,29 @@
-export type ServiceType = 'couch' | 'carpet' | 'car-seats' | 'mattress';
-export type Location = 
-  | 'Bastos' | 'Mvan' | 'Nsam' | 'Mvog-Mbi' | 'Essos' 
-  | 'Mimboman' | 'Nkoldongo' | 'Ekounou' | 'Emana' 
-  | 'Nkolbisson' | 'Olembe' | 'Ngousso' | 'Messa' 
-  | 'Omnisport' | 'Tsinga' | 'Etoa-Meki' | 'Nlongkak';
-
-export type Size = 'small' | 'medium' | 'large';
-
-export type ViewMode = 'month' | 'week' | 'agenda';
-
-export type Priority = 'low' | 'medium' | 'high';
-
-export interface ServiceDetails {
-  couch?: {
-    type: 'leather' | 'tissue';
-    seats: number;
-  };
-  carpet?: {
-    size: Size;
-    quantity: number;
-  };
-  'car-seats'?: {
-    seats: number;
-  };
-  mattress?: {
-    size: Size;
-    quantity: number;
+export interface Service {
+  id: string;
+  type: string;
+  details: {
+    [key: string]: any;
   };
 }
 
 export interface Reminder {
   id: string;
   datetime: string;
-  completed?: boolean;
   note?: string;
+  completed: boolean;
 }
 
 export interface Booking {
   id: string;
-  services: {
-    type: ServiceType;
-    details: ServiceDetails;
-  }[];
-  location: Location;
-  address: string;
+  name: string;
   phone: string;
   datetime: string;
-  endTime?: string;
+  location?: string;
+  address?: string;
   notes?: string;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-  isAllDay?: boolean;
-  priority: Priority;
-  name?: string;
-  reminders?: Reminder[];
+  priority: 'low' | 'medium' | 'high';
+  isAllDay: boolean;
+  services: Service[];
+  reminders: Reminder[];
 }

@@ -22,8 +22,8 @@ interface CalendarGridProps {
   viewMode: ViewMode;
   bookings: Booking[];
   onAddBooking: (date: Date) => void;
-  onUpdateBooking: (booking: Booking) => void;
-  onDeleteBooking: (bookingId: string) => void;
+  onUpdateBooking: (booking: Booking) => Promise<void>;
+  onDeleteBooking: (bookingId: string) => Promise<void>;
 }
 
 export function CalendarGrid({

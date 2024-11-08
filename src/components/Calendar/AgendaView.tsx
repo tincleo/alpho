@@ -6,7 +6,7 @@ import { BookingModal } from './BookingModal';
 
 interface AgendaViewProps {
   bookings: Booking[];
-  onUpdateBooking: (booking: Booking) => void;
+  onUpdateBooking: (booking: Booking) => Promise<void>;
   onDeleteBooking?: (bookingId: string) => void;
 }
 
@@ -73,7 +73,7 @@ export function AgendaView({ bookings, onUpdateBooking, onDeleteBooking }: Agend
           booking={selectedBooking}
           onClose={() => setSelectedBooking(null)}
           onEdit={onUpdateBooking}
-          onDelete={onDeleteBooking}
+          onDelete={onDeleteBooking ? (bookingId: string) => onDeleteBooking(bookingId) : undefined}
         />
       )}
     </div>

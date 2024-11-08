@@ -7,7 +7,6 @@ interface RemindersAccordionProps {
   reminders: Reminder[];
   onChange: (reminders: Reminder[]) => void;
   onComplete?: (reminderId: string, completed: boolean) => void;
-  bookingId: string;
 }
 
 const MAX_REMINDERS = 5;
@@ -15,31 +14,39 @@ const MAX_REMINDERS = 5;
 export function RemindersAccordion({ 
   reminders, 
   onChange, 
-  onComplete,
-  bookingId 
+  onComplete 
 }: RemindersAccordionProps) {
-  const [isOpen, setIsOpen] = React.useState(true);
+  const [isOpen, setIsOpen] = React.useState(false);
   const [showDatePicker, setShowDatePicker] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState(format(new Date(), "yyyy-MM-dd"));
   const [note, setNote] = React.useState('');
   const dateInputRef = React.useRef<HTMLInputElement>(null);
+  const [localReminders, setLocalReminders] = React.useState<Reminder[]>(reminders);
 
-  const hasReachedLimit = reminders.length >= MAX_REMINDERS;
+  // Keep local reminders in sync with prop reminders
+  React.useEffect(() => {
+    setLocalReminders(reminders);
+  }, [reminders]);
+
+  const hasReachedLimit = localReminders.length >= MAX_REMINDERS;
 
   // Check and remove outdated reminders
   React.useEffect(() => {
     const today = startOfDay(new Date());
-    const hasOutdatedReminders = reminders.some(reminder => 
+    const hasOutdatedReminders = localReminders.some(reminder => 
       isBefore(new Date(reminder.datetime), today)
     );
 
     if (hasOutdatedReminders) {
-      const updatedReminders = reminders.filter(reminder => 
+      const updatedReminders = localReminders.filter(reminder => 
         !isBefore(new Date(reminder.datetime), today)
       );
-      onChange(updatedReminders);
+      // Only call onChange if reminders actually changed
+      if (JSON.stringify(updatedReminders) !== JSON.stringify(localReminders)) {
+        onChange(updatedReminders);
+      }
     }
-  }, [reminders, onChange]);
+  }, [localReminders, onChange]);
 
   // Close popover on escape key
   React.useEffect(() => {
@@ -57,7 +64,7 @@ export function RemindersAccordion({
     const selectedDateTime = startOfDay(new Date(selectedDate));
     
     // Check if a reminder already exists for this date
-    const hasExistingReminder = reminders.some(reminder => 
+    const hasExistingReminder = localReminders.some(reminder => 
       isSameDay(new Date(reminder.datetime), selectedDateTime)
     );
 
@@ -74,7 +81,7 @@ export function RemindersAccordion({
     };
     
     // Add new reminder and sort
-    const updatedReminders = [...reminders, newReminder].sort((a, b) => 
+    const updatedReminders = [...localReminders, newReminder].sort((a, b) => 
       new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
     );
     
@@ -89,7 +96,7 @@ export function RemindersAccordion({
   };
 
   const deleteReminder = (id: string) => {
-    onChange(reminders.filter(reminder => reminder.id !== id));
+    onChange(localReminders.filter(reminder => reminder.id !== id));
   };
 
   const updateReminderDateTime = (id: string, dateStr: string) => {
@@ -102,7 +109,7 @@ export function RemindersAccordion({
     }
 
     // Check if another reminder already exists for this date
-    const hasExistingReminder = reminders.some(reminder => 
+    const hasExistingReminder = localReminders.some(reminder => 
       reminder.id !== id && // Exclude current reminder from check
       isSameDay(new Date(reminder.datetime), selectedDate)
     );
@@ -113,7 +120,7 @@ export function RemindersAccordion({
     }
     
     // Update reminder and sort the array
-    const updatedReminders = reminders.map(reminder => 
+    const updatedReminders = localReminders.map(reminder => 
       reminder.id === id ? { 
         ...reminder, 
         datetime: selectedDate.toISOString(),
@@ -126,8 +133,11 @@ export function RemindersAccordion({
   const today = startOfDay(new Date());
 
   // Sort reminders by date
-  const sortedReminders = [...reminders].sort((a, b) => 
-    new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
+  const sortedReminders = React.useMemo(() => 
+    [...localReminders].sort((a, b) => 
+      new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
+    ), 
+    [localReminders]
   );
 
   const getReminderMessage = (date: string) => {
@@ -167,6 +177,11 @@ export function RemindersAccordion({
     return `${format(date, "EEEE, dd MMMM")} (${daysText})`;
   };
 
+  // Add effect to log reminders changes
+  React.useEffect(() => {
+    console.log('RemindersAccordion received reminders:', localReminders);
+  }, [localReminders]);
+
   return (
     <div className="border rounded-lg overflow-hidden relative">
       <button
@@ -177,8 +192,8 @@ export function RemindersAccordion({
         <div className="flex items-center gap-2">
           <Bell className="w-4 h-4 text-gray-600" />
           <span className="font-medium text-gray-900">Reminders</span>
-          {reminders.length > 0 && (
-            <span className="text-sm text-gray-500">({reminders.length})</span>
+          {localReminders.length > 0 && (
+            <span className="text-sm text-gray-500">({localReminders.length})</span>
           )}
         </div>
         {isOpen ? (

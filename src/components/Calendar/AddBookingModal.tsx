@@ -7,7 +7,7 @@ import { RemindersAccordion } from './RemindersAccordion';
 
 interface AddBookingModalProps {
   onClose: () => void;
-  onAdd: (booking: Omit<Booking, 'id'>) => void;
+  onAdd: (booking: Omit<Booking, 'id'>) => Promise<void>;
   selectedDate?: Date;
   initialBooking?: Booking;
   initialType?: 'booking' | 'follow-up';
@@ -131,7 +131,7 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (prospectType === 'booking' && !formData.date) {
@@ -154,25 +154,29 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
       details: { [type]: serviceDetails[type] || {} }
     }));
 
-    onAdd({
-      services,
-      location: formData.location,
-      address: formData.address,
-      phone: formData.phone,
-      datetime: prospectType === 'booking' ? 
-        new Date(`${formData.date}T${formData.startTime}`).toISOString() :
-        new Date().toISOString(),
-      endTime: prospectType === 'booking' && formData.endTime ?
-        new Date(`${formData.date}T${formData.endTime}`).toISOString() :
-        undefined,
-      notes: formData.notes,
-      status: formData.status,
-      isAllDay: formData.isAllDay,
-      priority: formData.priority,
-      name: formData.name,
-      reminders,
-    });
-    onClose();
+    try {
+      await onAdd({
+        services,
+        location: formData.location,
+        address: formData.address,
+        phone: formData.phone,
+        datetime: prospectType === 'booking' ? 
+          new Date(`${formData.date}T${formData.startTime}`).toISOString() :
+          new Date().toISOString(),
+        endTime: prospectType === 'booking' && formData.endTime ?
+          new Date(`${formData.date}T${formData.endTime}`).toISOString() :
+          undefined,
+        notes: formData.notes,
+        status: formData.status,
+        isAllDay: formData.isAllDay,
+        priority: formData.priority,
+        name: formData.name,
+        reminders,
+      });
+      onClose();
+    } catch (error) {
+      alert('Failed to create booking. Please try again.');
+    }
   };
 
   return (

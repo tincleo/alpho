@@ -18,13 +18,6 @@ const SERVICE_TYPES: Record<string, string> = {
   'mattress': 'Mattress Cleaning'
 };
 
-const statusColors = {
-  pending: 'bg-yellow-50 text-yellow-800',
-  confirmed: 'bg-green-50 text-green-800',
-  completed: 'bg-blue-50 text-blue-800',
-  cancelled: 'bg-red-50 text-red-800'
-};
-
 const priorityColors = {
   low: 'bg-gray-50 text-gray-800',
   medium: 'bg-blue-50 text-blue-800',

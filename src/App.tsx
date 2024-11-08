@@ -9,6 +9,7 @@ import { Sidebar } from './components/Calendar/Sidebar';
 import { ProspectsSidebar } from './components/Calendar/ProspectsSidebar';
 import { RemindersPane } from './components/Calendar/RemindersPane';
 import { BookingModal } from './components/Calendar/BookingModal';
+import { fetchBookings, createBooking, deleteBooking, updateReminder, updateBooking } from './lib/api';
 
 const SAMPLE_BOOKINGS: Booking[] = [
   {
@@ -211,6 +212,66 @@ export default function App() {
   const [showProspects, setShowProspects] = React.useState(false);
   const [showReminders, setShowReminders] = React.useState(false);
   const [selectedBooking, setSelectedBooking] = React.useState<Booking | null>(null);
+  const [isInitialLoading, setIsInitialLoading] = React.useState(true);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // Fetch bookings on component mount
+  React.useEffect(() => {
+    loadBookings();
+  }, []);
+
+  const loadBookings = async () => {
+    try {
+      setIsInitialLoading(true);
+      setError(null);
+      const data = await fetchBookings();
+      setBookings(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load bookings');
+    } finally {
+      setIsInitialLoading(false);
+    }
+  };
+
+  const handleAddBooking = async (newBooking: Omit<Booking, 'id'>) => {
+    try {
+      setIsLoading(true);
+      const updatedBookings = await createBooking(newBooking);
+      setBookings(updatedBookings);
+      setShowAddModal(false);
+      setSelectedDate(undefined);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create booking');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteBooking = async (bookingId: string) => {
+    try {
+      setIsLoading(true);
+      const updatedBookings = await deleteBooking(bookingId);
+      setBookings(updatedBookings);
+      setSelectedBooking(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete booking');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdateReminder = async (bookingId: string, reminderId: string, completed: boolean) => {
+    try {
+      setIsLoading(true);
+      const updatedBookings = await updateReminder(bookingId, reminderId, completed);
+      setBookings(updatedBookings);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update reminder');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredBookings = React.useMemo(() => {
     const filtered = bookings.filter(booking => {
@@ -247,26 +308,6 @@ export default function App() {
     setCurrentDate(viewMode === 'week' ? startOfWeek(today, { weekStartsOn: 1 }) : startOfMonth(today));
   };
 
-  const handleAddBooking = (newBooking: Omit<Booking, 'id'>) => {
-    const booking: Booking = {
-      ...newBooking,
-      id: Math.random().toString(36).substr(2, 9),
-    };
-    setBookings((prev) => [...prev, booking]);
-  };
-
-  const handleUpdateBooking = (updatedBooking: Booking) => {
-    setBookings((prev) =>
-      prev.map((booking) =>
-        booking.id === updatedBooking.id ? updatedBooking : booking
-      )
-    );
-  };
-
-  const handleDeleteBooking = (bookingId: string) => {
-    setBookings((prev) => prev.filter((booking) => booking.id !== bookingId));
-  };
-
   const handleAddBookingClick = (date?: Date) => {
     setSelectedDate(date);
     setShowAddModal(true);
@@ -278,20 +319,42 @@ export default function App() {
     );
   }, [bookings]);
 
-  const handleUpdateReminder = (bookingId: string, reminderId: string, completed: boolean) => {
-    setBookings(prev => prev.map(booking => {
-      if (booking.id !== bookingId) return booking;
-      
-      return {
-        ...booking,
-        reminders: (booking.reminders || []).map(reminder => 
-          reminder.id === reminderId 
-            ? { ...reminder, completed }
-            : reminder
-        )
-      };
-    }));
+  const handleUpdateBooking = async (updatedBooking: Booking) => {
+    try {
+      setIsLoading(true);
+      const updatedBookings = await updateBooking(updatedBooking);
+      setBookings(updatedBookings);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update booking');
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  if (isInitialLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          <h2 className="text-red-600 font-medium mb-2">Error</h2>
+          <p className="text-gray-600">{error}</p>
+          <button
+            onClick={loadBookings}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
@@ -372,6 +435,12 @@ export default function App() {
           onDelete={handleDeleteBooking}
           onUpdateReminder={handleUpdateReminder}
         />
+      )}
+
+      {isLoading && (
+        <div className="fixed bottom-4 right-4 bg-white px-4 py-2 rounded-lg shadow-lg">
+          <div className="text-sm text-gray-600">Saving changes...</div>
+        </div>
       )}
     </div>
   );
