@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Booking } from '../../types/calendar';
-import { updateBooking } from '../../services/bookingService';
+import { updateBooking } from '../../lib/api';
 
 export default function App() {
   const [bookings, setBookings] = useState<Booking[]>([]);

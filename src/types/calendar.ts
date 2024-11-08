@@ -1,9 +1,7 @@
 export interface Service {
   id: string;
   type: string;
-  details: {
-    [key: string]: any;
-  };
+  details: Record<string, unknown>;
 }
 
 export interface Reminder {

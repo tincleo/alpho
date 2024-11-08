@@ -74,7 +74,7 @@ export function RemindersAccordion({
     }
     
     const newReminder: Reminder = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: `temp_${Math.random().toString(36).substr(2, 9)}`,
       datetime: selectedDateTime.toISOString(),
       note: note.trim(),
       completed: false

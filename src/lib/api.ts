@@ -1,17 +1,24 @@
 import { supabase } from './supabase';
-import type { Booking, ServiceType, ServiceDetails, Location } from '../types/calendar';
+import type { Booking, Service } from '../types/calendar';
 import type { Database } from './database.types';
 
 type ProspectRow = Database['public']['Tables']['prospects']['Row'];
 type ServiceRow = Database['public']['Tables']['services']['Row'];
 type ReminderRow = Database['public']['Tables']['reminders']['Row'];
 
+// Valid locations
+const VALID_LOCATIONS = [
+  'Bastos', 'Mvan', 'Nsam', 'Mvog-Mbi', 'Essos', 
+  'Mimboman', 'Nkoldongo', 'Ekounou', 'Emana', 
+  'Nkolbisson', 'Olembe', 'Ngousso', 'Messa', 
+  'Omnisport', 'Tsinga', 'Etoa-Meki', 'Nlongkak'
+] as const;
+
+type Location = typeof VALID_LOCATIONS[number];
+
 // Helper function to validate location
 function isValidLocation(location: string): location is Location {
-  return ['Bastos', 'Mvan', 'Nsam', 'Mvog-Mbi', 'Essos', 
-          'Mimboman', 'Nkoldongo', 'Ekounou', 'Emana', 
-          'Nkolbisson', 'Olembe', 'Ngousso', 'Messa', 
-          'Omnisport', 'Tsinga', 'Etoa-Meki', 'Nlongkak'].includes(location);
+  return VALID_LOCATIONS.includes(location as Location);
 }
 
 // Convert database row to Booking type
@@ -20,30 +27,30 @@ const rowToBooking = async (
   services: ServiceRow[],
   reminders: ReminderRow[]
 ): Promise<Booking> => {
-  if (!isValidLocation(prospect.location)) {
+  if (!prospect.location || !isValidLocation(prospect.location)) {
     throw new Error(`Invalid location: ${prospect.location}`);
   }
 
   return {
     id: prospect.id,
-    name: prospect.name || undefined,
+    name: prospect.name ?? '',
     phone: prospect.phone,
-    location: prospect.location, // TypeScript now knows this is a valid Location
-    address: prospect.address || '',
+    location: prospect.location,
+    address: prospect.address ?? '',
     datetime: prospect.datetime,
-    endTime: prospect.end_time || undefined,
     status: prospect.status,
     priority: prospect.priority,
     isAllDay: prospect.is_all_day,
-    notes: prospect.notes || undefined,
+    notes: prospect.notes ?? '',
     services: services.map(s => ({
-      type: s.type as ServiceType,
-      details: s.details as ServiceDetails
+      id: s.id,
+      type: s.type,
+      details: s.details as Record<string, unknown>
     })),
     reminders: reminders.map(r => ({
       id: r.id,
       datetime: r.datetime,
-      note: r.note || undefined,
+      note: r.note ?? undefined,
       completed: r.completed
     }))
   };
@@ -85,10 +92,9 @@ export async function createBooking(booking: Omit<Booking, 'id'>) {
     .insert({
       name: booking.name,
       phone: booking.phone,
-      location: booking.location.toString(),
+      location: booking.location ?? 'Bastos', // Default to Bastos if location is undefined
       address: booking.address,
       datetime: booking.datetime,
-      end_time: booking.endTime,
       status: booking.status,
       priority: booking.priority,
       is_all_day: booking.isAllDay,
@@ -105,7 +111,8 @@ export async function createBooking(booking: Omit<Booking, 'id'>) {
     .insert(
       booking.services.map(service => ({
         prospect_id: prospect.id,
-        type: service.type.toString(),
+        id: service.id,
+        type: service.type,
         details: service.details
       }))
     );
@@ -158,6 +165,15 @@ export async function deleteBooking(bookingId: string) {
   return fetchBookings();
 }
 
+// Helper function to generate a UUID
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 // Update a booking
 export async function updateBooking(booking: Booking) {
   try {
@@ -167,10 +183,9 @@ export async function updateBooking(booking: Booking) {
       .update({
         name: booking.name,
         phone: booking.phone,
-        location: booking.location.toString(),
+        location: booking.location ?? 'Bastos',
         address: booking.address,
         datetime: booking.datetime,
-        end_time: booking.endTime,
         status: booking.status,
         priority: booking.priority,
         is_all_day: booking.isAllDay,
@@ -186,7 +201,8 @@ export async function updateBooking(booking: Booking) {
       .upsert(
         booking.services.map(service => ({
           prospect_id: booking.id,
-          type: service.type.toString(),
+          id: service.id,
+          type: service.type,
           details: service.details
         })),
         {
@@ -197,46 +213,68 @@ export async function updateBooking(booking: Booking) {
 
     if (servicesError) throw servicesError;
 
-    // First, delete all existing reminders for this prospect
-    const { error: deleteRemindersError } = await supabase
+    // Handle reminders
+    // First, get existing reminders
+    const { data: existingReminders, error: remindersError } = await supabase
       .from('reminders')
-      .delete()
+      .select('*')
       .eq('prospect_id', booking.id);
 
-    if (deleteRemindersError) throw deleteRemindersError;
+    if (remindersError) throw remindersError;
 
-    // Then insert new reminders if any exist
-    if (booking.reminders && booking.reminders.length > 0) {
-      const { error: remindersError } = await supabase
+    // Delete reminders that are no longer present
+    const reminderIdsToKeep = booking.reminders
+      .filter(r => !r.id.includes('temp_'))
+      .map(r => r.id);
+    const remindersToDelete = (existingReminders || [])
+      .filter(r => !reminderIdsToKeep.includes(r.id))
+      .map(r => r.id);
+
+    if (remindersToDelete.length > 0) {
+      const { error: deleteError } = await supabase
         .from('reminders')
-        .insert(
-          booking.reminders.map(reminder => ({
-            id: reminder.id,
+        .delete()
+        .in('id', remindersToDelete);
+
+      if (deleteError) throw deleteError;
+    }
+
+    // Handle new and existing reminders
+    const reminderPromises = booking.reminders.map(reminder => {
+      if (reminder.id.includes('temp_')) {
+        // This is a new reminder, insert it with a proper UUID
+        return supabase
+          .from('reminders')
+          .insert({
+            id: generateUUID(),
             prospect_id: booking.id,
             datetime: reminder.datetime,
-            note: reminder.note,
-            completed: reminder.completed || false
-          }))
-        );
+            note: reminder.note || '',
+            completed: reminder.completed
+          });
+      } else {
+        // This is an existing reminder, update it
+        return supabase
+          .from('reminders')
+          .update({
+            datetime: reminder.datetime,
+            note: reminder.note || '',
+            completed: reminder.completed
+          })
+          .eq('id', reminder.id);
+      }
+    });
 
-      if (remindersError) throw remindersError;
-    }
+    // Wait for all reminder operations to complete
+    const reminderResults = await Promise.all(reminderPromises);
     
-    // Fetch the updated booking with all its relations
-    const { data: updatedProspect, error: fetchError } = await supabase
-      .from('prospects')
-      .select(`
-        *,
-        services (*),
-        reminders (*)
-      `)
-      .eq('id', booking.id)
-      .single();
-
-    if (fetchError) throw fetchError;
+    // Check for any errors in the reminder operations
+    for (const result of reminderResults) {
+      if (result.error) throw result.error;
+    }
 
     return fetchBookings();
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error updating booking:', error);
     throw error;
   }
