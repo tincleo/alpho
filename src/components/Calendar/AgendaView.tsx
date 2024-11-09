@@ -11,13 +11,15 @@ interface AgendaViewProps {
   onUpdateBooking: (booking: Booking) => Promise<void>;
   onDeleteBooking: (bookingId: string) => Promise<void>;
   onBookingsChange?: () => void;
+  onUpdateReminder: (prospectId: string, reminderId: string, completed: boolean) => Promise<void>;
 }
 
 export function AgendaView({ 
   bookings, 
   onUpdateBooking, 
   onDeleteBooking, 
-  onBookingsChange 
+  onBookingsChange,
+  onUpdateReminder 
 }: AgendaViewProps) {
   const [selectedBooking, setSelectedBooking] = React.useState<Booking | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -46,17 +48,10 @@ export function AgendaView({
 
   const handleUpdateReminder = async (prospectId: string, reminderId: string, completed: boolean) => {
     try {
-      const updatedBookings = await updateReminder(prospectId, reminderId, completed);
-      // Update the selected booking with the new data
-      const updatedBooking = updatedBookings.find(b => b.id === prospectId);
-      if (updatedBooking) {
-        setSelectedBooking(updatedBooking);
-      }
-      // Notify parent to refresh data
+      await updateReminder(prospectId, reminderId, completed);
       onBookingsChange?.();
     } catch (error) {
       console.error('Failed to update reminder:', error);
-      setError(error instanceof Error ? error.message : 'Failed to update reminder');
       throw error;
     }
   };
@@ -111,7 +106,7 @@ export function AgendaView({
           onClose={() => setSelectedBooking(null)}
           onEdit={onUpdateBooking}
           onDelete={handleDeleteBooking}
-          onUpdateReminder={handleUpdateReminder}
+          onUpdateReminder={onUpdateReminder}
         />
       )}
 

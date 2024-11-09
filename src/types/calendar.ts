@@ -1,7 +1,18 @@
+export type ServiceType = 'couch' | 'carpet' | 'car-seats' | 'mattress';
+
+export interface ServiceDetails {
+  [key: string]: {
+    size?: string;
+    material?: string;
+    stains?: boolean;
+    quantity?: number;
+  };
+}
+
 export interface Service {
   id: string;
-  type: string;
-  details: Record<string, unknown>;
+  type: ServiceType;
+  details: ServiceDetails;
 }
 
 export interface Reminder {

@@ -1,17 +1,16 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Reminder } from '../types/calendar';
-import { updateReminder } from '../lib/api';
 
 interface UseRemindersProps {
   bookingId: string;
   initialReminders: Reminder[];
-  onBookingsChange?: (reminderId: string, completed: boolean) => Promise<void>;
+  onComplete: (reminderId: string, completed: boolean) => Promise<void>;
 }
 
 export function useReminders({ 
   bookingId, 
   initialReminders, 
-  onBookingsChange 
+  onComplete 
 }: UseRemindersProps) {
   const [reminders, setReminders] = useState<Reminder[]>(initialReminders);
   const [error, setError] = useState<string | null>(null);
@@ -26,10 +25,8 @@ export function useReminders({
         reminder.id === reminderId ? { ...reminder, completed } : reminder
       ));
 
-      // Call the callback with the updated status
-      if (onBookingsChange) {
-        await onBookingsChange(reminderId, completed);
-      }
+      // Call the parent's complete handler
+      await onComplete(reminderId, completed);
     } catch (error) {
       // Revert on error
       setReminders(prev => prev.map(reminder => 
@@ -43,7 +40,7 @@ export function useReminders({
   };
 
   // Update local reminders when initialReminders changes
-  useState(() => {
+  useEffect(() => {
     setReminders(initialReminders);
   }, [initialReminders]);
 

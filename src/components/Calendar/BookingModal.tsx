@@ -35,10 +35,12 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
   const [error, setError] = React.useState<string | null>(null);
   const [showPhoneMenu, setShowPhoneMenu] = React.useState(false);
   const phoneMenuRef = React.useRef<HTMLDivElement>(null);
+  const [currentBooking, setCurrentBooking] = React.useState(booking);
 
   React.useEffect(() => {
+    setCurrentBooking(booking);
     setReminders(booking.reminders || []);
-  }, [booking.reminders]);
+  }, [booking]);
 
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -54,14 +56,15 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
   const handleEdit = async (updatedBooking: Omit<Booking, 'id'>) => {
     try {
       setIsLoading(true);
-      await onEdit({ 
+      const fullBooking = { 
         ...updatedBooking, 
-        id: booking.id,
+        id: currentBooking.id,
         reminders: reminders,
-        services: booking.services
-      });
+        services: currentBooking.services
+      };
+      await onEdit(fullBooking);
+      setCurrentBooking(fullBooking as Booking);
       setShowEditModal(false);
-      onClose();
     } catch {
       setError('Failed to update prospect');
     } finally {
@@ -100,26 +103,6 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
     }
   };
 
-  const handleReminderComplete = async (reminderId: string, completed: boolean) => {
-    try {
-      setIsLoading(true);
-      
-      setReminders(prev => prev.map(reminder => 
-        reminder.id === reminderId ? { ...reminder, completed } : reminder
-      ));
-
-      await onUpdateReminder(booking.id, reminderId, completed);
-    } catch (error) {
-      setReminders(prev => prev.map(reminder => 
-        reminder.id === reminderId ? { ...reminder, completed: !completed } : reminder
-      ));
-      console.error('Failed to update reminder:', error);
-      setError('Failed to update reminder status');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleCall = () => {
     window.location.href = `tel:${booking.phone}`;
     setShowPhoneMenu(false);
@@ -132,6 +115,14 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
       : '+237' + booking.phone.replace(/\s/g, '');
     window.open(`https://wa.me/${phoneNumber}`, '_blank');
     setShowPhoneMenu(false);
+  };
+
+  const handleRefresh = async () => {
+    try {
+      await onEdit(booking);
+    } catch (error) {
+      console.error('Failed to refresh booking:', error);
+    }
   };
 
   if (error) {
@@ -153,37 +144,37 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl w-full max-w-lg">
-        <div className="p-6 space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h2 className="text-xl font-bold text-gray-900">
-                Prospect Details
-              </h2>
-              {booking.name && (
-                <div className="flex items-center gap-2 text-gray-600">
-                  <User className="w-4 h-4" />
-                  <span>{booking.name}</span>
-                </div>
-              )}
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              disabled={isLoading}
-            >
-              <X className="w-5 h-5" />
-            </button>
+      <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        {/* Header - Fixed */}
+        <div className="flex items-center justify-between p-6 border-b">
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold text-gray-900">
+              Prospect Details
+            </h2>
+            {currentBooking.name && (
+              <div className="flex items-center gap-2 text-gray-600">
+                <User className="w-4 h-4" />
+                <span>{currentBooking.name}</span>
+              </div>
+            )}
           </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            disabled={isLoading}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-          <div className="space-y-4">
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-6">
             {/* Reminders */}
             <RemindersAccordion
-              bookingId={booking.id}
               reminders={reminders}
               onChange={handleRemindersChange}
-              onComplete={handleReminderComplete}
+              onRefresh={handleRefresh}
             />
 
             {/* Services */}
@@ -192,8 +183,8 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
                 Services
               </label>
               <ServiceTypeSelector
-                selectedServices={booking.services.map(s => s.type)}
-                serviceDetails={booking.services.reduce((acc, service) => ({
+                selectedServices={currentBooking.services.map(s => s.type)}
+                serviceDetails={currentBooking.services.reduce((acc, service) => ({
                   ...acc,
                   [service.type]: service.details[service.type]
                 }), {})}
@@ -205,16 +196,16 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
 
             {/* Status and Priority */}
             <div className="flex flex-wrap gap-2">
-              <span className={`px-2.5 py-1 rounded-full text-sm ${statusColors[booking.status]}`}>
-                {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+              <span className={`px-2.5 py-1 rounded-full text-sm ${statusColors[currentBooking.status]}`}>
+                {currentBooking.status.charAt(0).toUpperCase() + currentBooking.status.slice(1)}
               </span>
-              <span className={`px-2.5 py-1 rounded-full text-sm ${priorityColors[booking.priority]}`}>
+              <span className={`px-2.5 py-1 rounded-full text-sm ${priorityColors[currentBooking.priority]}`}>
                 <div className="flex items-center gap-1">
                   <Flag className="w-3 h-3" />
-                  {booking.priority.charAt(0).toUpperCase() + booking.priority.slice(1)} Priority
+                  {currentBooking.priority.charAt(0).toUpperCase() + currentBooking.priority.slice(1)} Priority
                 </div>
               </span>
-              {booking.isAllDay && (
+              {currentBooking.isAllDay && (
                 <span className="px-2.5 py-1 rounded-full text-sm bg-purple-50 text-purple-800">
                   All day
                 </span>
@@ -222,14 +213,14 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
             </div>
 
             {/* Date and Time */}
-            {booking.datetime && (
+            {currentBooking.datetime && (
               <div className="flex items-center gap-2 text-gray-600">
                 <Calendar className="w-4 h-4" />
-                <span>{format(new Date(booking.datetime), 'EEEE, MMMM d, yyyy')}</span>
-                {!booking.isAllDay && booking.datetime && (
+                <span>{format(new Date(currentBooking.datetime), 'EEEE, MMMM d, yyyy')}</span>
+                {!currentBooking.isAllDay && currentBooking.datetime && (
                   <>
                     <Clock className="w-4 h-4 ml-2" />
-                    <span>{format(new Date(booking.datetime), 'HH:mm')}</span>
+                    <span>{format(new Date(currentBooking.datetime), 'HH:mm')}</span>
                   </>
                 )}
               </div>
@@ -243,7 +234,7 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
                   className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
                 >
                   <Phone className="w-4 h-4 group-hover:text-blue-500" />
-                  <span className="group-hover:text-blue-500">{booking.phone}</span>
+                  <span className="group-hover:text-blue-500">{currentBooking.phone}</span>
                 </button>
 
                 {showPhoneMenu && (
@@ -269,93 +260,90 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
                 )}
               </div>
 
-              {(booking.location || booking.address) && (
+              {(currentBooking.location || currentBooking.address) && (
                 <div className="flex items-start gap-2 text-gray-600">
                   <MapPin className="w-4 h-4 mt-1" />
                   <div>
-                    {booking.location && <div>{booking.location}</div>}
-                    {booking.address && <div className="text-sm">{booking.address}</div>}
+                    {currentBooking.location && <div>{currentBooking.location}</div>}
+                    {currentBooking.address && <div className="text-sm">{currentBooking.address}</div>}
                   </div>
                 </div>
               )}
             </div>
 
             {/* Notes */}
-            {booking.notes && (
+            {currentBooking.notes && (
               <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{booking.notes}</p>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{currentBooking.notes}</p>
               </div>
             )}
           </div>
+        </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <div className="relative">
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                disabled={isLoading}
-              >
-                Delete
-              </button>
+        {/* Footer - Fixed */}
+        <div className="flex justify-end gap-2 p-6 border-t">
+          <div className="relative">
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              disabled={isLoading}
+            >
+              Delete
+            </button>
 
-              {showDeleteConfirm && (
-                <div className="absolute bottom-full right-0 mb-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 p-4">
-                  <div className="flex gap-3">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                      <AlertTriangle className="w-5 h-5 text-red-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-900">Delete Prospect</h3>
-                      <p className="mt-1 text-sm text-gray-500">
-                        Are you sure you want to delete this prospect? This action cannot be undone.
-                      </p>
-                      <div className="mt-3 flex gap-2 justify-end">
-                        <button
-                          type="button"
-                          onClick={() => setShowDeleteConfirm(false)}
-                          className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                          disabled={isLoading}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleDelete}
-                          className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
-                          disabled={isLoading}
-                        >
-                          {isLoading ? 'Deleting...' : 'Delete'}
-                        </button>
-                      </div>
+            {showDeleteConfirm && (
+              <div className="absolute bottom-full right-0 mb-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">Delete Prospect</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Are you sure you want to delete this prospect? This action cannot be undone.
+                    </p>
+                    <div className="mt-3 flex gap-2 justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setShowDeleteConfirm(false)}
+                        className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                        disabled={isLoading}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Deleting...' : 'Delete'}
+                      </button>
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
-            
-            <button
-              onClick={() => setShowEditModal(true)}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-              disabled={isLoading}
-            >
-              Edit
-            </button>
+              </div>
+            )}
           </div>
+          
+          <button
+            onClick={() => setShowEditModal(true)}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+            disabled={isLoading}
+          >
+            Edit
+          </button>
         </div>
       </div>
 
       {showEditModal && (
         <AddBookingModal
           initialBooking={{
-            ...booking,
+            ...currentBooking,
             reminders: reminders
           }}
-          initialType={booking.datetime ? 'booking' : 'follow-up'}
-          onClose={() => {
-            setShowEditModal(false);
-            onClose();
-          }}
+          initialType={currentBooking.datetime ? 'booking' : 'follow-up'}
+          onClose={() => setShowEditModal(false)}
           onAdd={handleEdit}
         />
       )}

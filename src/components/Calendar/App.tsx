@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Booking } from '../../types/calendar';
-import { fetchBookings, updateBooking, deleteBooking } from '../../lib/api';
+import { fetchBookings, updateBooking, deleteBooking, updateReminder } from '../../lib/api';
 import { AgendaView } from './AgendaView';
 
 export default function App() {
@@ -48,6 +48,19 @@ export default function App() {
     }
   };
 
+  const handleUpdateReminder = async (prospectId: string, reminderId: string, completed: boolean) => {
+    try {
+      setIsSaving(true);
+      await updateReminder(prospectId, reminderId, completed);
+      await loadBookings();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update reminder');
+      console.error('Error updating reminder:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex">
       <AgendaView
@@ -55,6 +68,7 @@ export default function App() {
         onUpdateBooking={handleUpdateBooking}
         onDeleteBooking={handleDeleteBooking}
         onBookingsChange={loadBookings}
+        onUpdateReminder={handleUpdateReminder}
       />
 
       {error && (
