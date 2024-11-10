@@ -45,7 +45,7 @@ const rowToBooking = async (
     services: services.map(s => ({
       id: s.id,
       type: s.type,
-      details: s.details as Record<string, unknown>
+      details: { [s.type]: s.details }
     })),
     reminders: reminders.map(r => ({
       id: r.id,
@@ -87,53 +87,83 @@ export async function fetchBookings() {
 
 // Create a new booking
 export async function createBooking(booking: Omit<Booking, 'id'>) {
-  const { data: prospect, error: prospectError } = await supabase
-    .from('prospects')
-    .insert({
-      name: booking.name,
-      phone: booking.phone,
-      location: booking.location ?? 'Bastos', // Default to Bastos if location is undefined
-      address: booking.address,
-      datetime: booking.datetime,
-      status: booking.status,
-      priority: booking.priority,
-      is_all_day: booking.isAllDay,
-      notes: booking.notes
-    })
-    .select()
-    .single();
+  try {
+    // First create the prospect
+    const { data: prospect, error: prospectError } = await supabase
+      .from('prospects')
+      .insert({
+        name: booking.name,
+        phone: booking.phone,
+        location: booking.location ?? 'Bastos',
+        address: booking.address,
+        datetime: booking.datetime,
+        status: booking.status,
+        priority: booking.priority,
+        is_all_day: booking.isAllDay,
+        notes: booking.notes
+      })
+      .select()
+      .single();
 
-  if (prospectError) throw prospectError;
+    if (prospectError) throw prospectError;
 
-  // Insert services
-  const servicesPromise = supabase
-    .from('services')
-    .insert(
-      booking.services.map(service => ({
+    // Insert services if any
+    if (booking.services.length > 0) {
+      // Prepare services data with proper structure
+      const servicesData = booking.services.map(service => ({
+        id: generateUUID(),
         prospect_id: prospect.id,
-        id: service.id,
         type: service.type,
-        details: service.details
-      }))
-    );
+        details: service.details[service.type] // Get the actual details object
+      }));
 
-  // Insert reminders if any
-  const remindersPromise = booking.reminders?.length
-    ? supabase
+      // Insert all services in a single operation
+      const { error: servicesError } = await supabase
+        .from('services')
+        .insert(servicesData);
+
+      if (servicesError) {
+        console.error('Error inserting services:', servicesError);
+        // If services insertion fails, delete the prospect to maintain consistency
+        await supabase
+          .from('prospects')
+          .delete()
+          .eq('id', prospect.id);
+        throw servicesError;
+      }
+    }
+
+    // Insert reminders if any
+    if (booking.reminders?.length) {
+      const remindersData = booking.reminders.map(reminder => ({
+        id: generateUUID(),
+        prospect_id: prospect.id,
+        datetime: reminder.datetime,
+        note: reminder.note || '',
+        completed: reminder.completed || false
+      }));
+
+      const { error: remindersError } = await supabase
         .from('reminders')
-        .insert(
-          booking.reminders.map(reminder => ({
-            prospect_id: prospect.id,
-            datetime: reminder.datetime,
-            note: reminder.note,
-            completed: reminder.completed || false
-          }))
-        )
-    : Promise.resolve();
+        .insert(remindersData);
 
-  await Promise.all([servicesPromise, remindersPromise]);
+      if (remindersError) {
+        console.error('Error inserting reminders:', remindersError);
+        // If reminders insertion fails, delete the prospect and services
+        await supabase
+          .from('prospects')
+          .delete()
+          .eq('id', prospect.id);
+        throw remindersError;
+      }
+    }
 
-  return fetchBookings();
+    // Return updated bookings
+    return fetchBookings();
+  } catch (error) {
+    console.error('Error creating booking:', error);
+    throw error;
+  }
 }
 
 // Keep only this simple function for reminder completion
@@ -163,7 +193,7 @@ export async function deleteBooking(bookingId: string) {
   return fetchBookings();
 }
 
-// Helper function to generate a UUID
+// Helper function to generate UUID
 function generateUUID() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
     const r = Math.random() * 16 | 0;
@@ -175,7 +205,7 @@ function generateUUID() {
 // Update a booking
 export async function updateBooking(booking: Booking) {
   try {
-    // Update prospect
+    // Update prospect first
     const { error: prospectError } = await supabase
       .from('prospects')
       .update({
@@ -193,23 +223,34 @@ export async function updateBooking(booking: Booking) {
 
     if (prospectError) throw prospectError;
 
-    // Update services using upsert
-    const { error: servicesError } = await supabase
+    // Delete all existing services for this prospect
+    const { error: deleteError } = await supabase
       .from('services')
-      .upsert(
-        booking.services.map(service => ({
-          prospect_id: booking.id,
-          id: service.id,
-          type: service.type,
-          details: service.details
-        })),
-        {
-          onConflict: 'prospect_id,type',
-          ignoreDuplicates: false
-        }
-      );
+      .delete()
+      .eq('prospect_id', booking.id);
 
-    if (servicesError) throw servicesError;
+    if (deleteError) throw deleteError;
+
+    // Insert all services with properly structured data
+    if (booking.services.length > 0) {
+      const servicesData = booking.services.map(service => ({
+        id: service.id.includes('temp_') || service.id.includes('_') 
+          ? generateUUID() 
+          : service.id,
+        prospect_id: booking.id,
+        type: service.type,
+        details: service.details[service.type] || {}  // Get the actual details object
+      }));
+
+      const { error: insertError } = await supabase
+        .from('services')
+        .insert(servicesData);
+
+      if (insertError) {
+        console.error('Error inserting services:', insertError);
+        throw insertError;
+      }
+    }
 
     // Handle reminders
     // First, get existing reminders
@@ -272,7 +313,7 @@ export async function updateBooking(booking: Booking) {
     }
 
     return fetchBookings();
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('Error updating booking:', error);
     throw error;
   }

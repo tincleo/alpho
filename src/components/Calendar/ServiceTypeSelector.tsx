@@ -26,7 +26,7 @@ interface ServiceCardProps {
 const SERVICE_OPTIONS: { type: ServiceType; label: string }[] = [
   { type: 'couch', label: 'Couch Cleaning' },
   { type: 'carpet', label: 'Carpet Cleaning' },
-  { type: 'auto-detailing', label: 'Auto Detailing' },
+  { type: 'auto_detailing', label: 'Auto Detailing' },
   { type: 'mattress', label: 'Mattress Cleaning' }
 ];
 
@@ -40,7 +40,7 @@ function ServiceCard({
     switch (type) {
       case 'couch': return 'Couch Cleaning';
       case 'carpet': return 'Carpet Cleaning';
-      case 'auto-detailing': return 'Auto Detailing';
+      case 'auto_detailing': return 'Auto Detailing';
       case 'mattress': return 'Mattress Cleaning';
       default: return type;
     }
@@ -58,7 +58,7 @@ function ServiceCard({
         const size = details.size ? details.size.charAt(0).toUpperCase() + details.size.slice(1) : '';
         return `${size}, Qty: ${details.quantity || 1}`;
       
-      case 'auto-detailing':
+      case 'auto_detailing':
         const mode = details.cleaningMode ? 
           details.cleaningMode.split('-')
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -162,7 +162,7 @@ function ServiceOptionsModal({
         return { material: 'fabric', seats: 7 };
       case 'carpet':
         return { size: 'medium', quantity: 1 };
-      case 'auto-detailing':
+      case 'auto_detailing':
         return { seats: 5, cleaningMode: 'seats-only' };
       case 'mattress':
         return { size: 'medium', quantity: 1 };
@@ -180,7 +180,7 @@ function ServiceOptionsModal({
     switch (type) {
       case 'couch': return 'Couch Cleaning';
       case 'carpet': return 'Carpet Cleaning';
-      case 'auto-detailing': return 'Auto Detailing';
+      case 'auto_detailing': return 'Auto Detailing';
       case 'mattress': return 'Mattress Cleaning';
       default: return type;
     }
@@ -255,7 +255,7 @@ function ServiceOptionsModal({
           </div>
         );
 
-      case 'auto-detailing':
+      case 'auto_detailing':
         return (
           <div className="space-y-4">
             <div>

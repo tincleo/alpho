@@ -69,12 +69,21 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
   const handleEdit = async (updatedBooking: Omit<Booking, 'id'>) => {
     try {
       setIsLoading(true);
+      const services = selectedServices.map(service => ({
+        id: service.id,
+        type: service.type,
+        details: {
+          [service.type]: serviceDetails[service.id]
+        }
+      }));
+
       const fullBooking = { 
         ...updatedBooking, 
         id: currentBooking.id,
         reminders: reminders,
-        services: currentBooking.services
+        services
       };
+      
       await onEdit(fullBooking);
       setCurrentBooking(fullBooking as Booking);
       setShowEditModal(false);
@@ -155,12 +164,36 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
         [service.id]: service.details
       }));
     }
+
+    // Update the current booking with new services
+    setCurrentBooking(prev => ({
+      ...prev,
+      services: selectedServices.map(service => ({
+        id: service.id,
+        type: service.type,
+        details: {
+          [service.type]: serviceDetails[service.id]
+        }
+      }))
+    }));
   };
 
   const handleServiceDetailsUpdate = (serviceId: string, details: ServiceDetails[string]) => {
     setServiceDetails(prev => ({
       ...prev,
       [serviceId]: details
+    }));
+
+    // Update the current booking with updated service details
+    setCurrentBooking(prev => ({
+      ...prev,
+      services: selectedServices.map(service => ({
+        id: service.id,
+        type: service.type,
+        details: {
+          [service.type]: service.id === serviceId ? details : serviceDetails[service.id]
+        }
+      }))
     }));
   };
 
