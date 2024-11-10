@@ -127,33 +127,58 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
     }
   };
 
-  const handleServiceToggle = (service: ServiceInstance) => {
-    if (currentBooking.services.some(s => s.id === service.id)) {
-      // Remove service
-      setCurrentBooking(prev => ({
-        ...prev,
-        services: prev.services.filter(s => s.id !== service.id)
-      }));
-    } else {
-      // Add new service
-      setCurrentBooking(prev => ({
-        ...prev,
-        services: [...prev.services, service]
-      }));
+  const handleServiceToggle = async (service: ServiceInstance) => {
+    try {
+      setIsLoading(true);
+      let updatedServices;
+
+      if (currentBooking.services.some(s => s.id === service.id)) {
+        // Remove service
+        updatedServices = currentBooking.services.filter(s => s.id !== service.id);
+      } else {
+        // Add new service
+        updatedServices = [...currentBooking.services, service];
+      }
+
+      // Update booking with new services
+      const updatedBooking = {
+        ...currentBooking,
+        services: updatedServices
+      };
+
+      await onEdit(updatedBooking);
+      setCurrentBooking(updatedBooking);
+    } catch (error) {
+      setError('Failed to update services');
+      console.error('Failed to update services:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleServiceDetailsUpdate = (serviceId: string, details: ServiceDetails[string]) => {
-    setCurrentBooking(prev => ({
-      ...prev,
-      services: prev.services.map(service => ({
-        ...service,
-        details: {
-          ...service.details,
-          [service.type]: service.id === serviceId ? details : service.details[service.type]
-        }
-      }))
-    }));
+  const handleServiceDetailsUpdate = async (serviceId: string, details: ServiceDetails[string]) => {
+    try {
+      setIsLoading(true);
+      const updatedServices = currentBooking.services.map(service => 
+        service.id === serviceId ? {
+          ...service,
+          details: { [service.type]: details }
+        } : service
+      );
+
+      const updatedBooking = {
+        ...currentBooking,
+        services: updatedServices
+      };
+
+      await onEdit(updatedBooking);
+      setCurrentBooking(updatedBooking);
+    } catch (error) {
+      setError('Failed to update service details');
+      console.error('Failed to update service details:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (error) {
@@ -208,7 +233,7 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
               onRefresh={handleRefresh}
             />
 
-            {/* Services */}
+            {/* Services - Now editable directly */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Services
@@ -221,7 +246,7 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
                 }), {})}
                 onToggleService={handleServiceToggle}
                 onUpdateDetails={handleServiceDetailsUpdate}
-                readOnly
+                readOnly={false}
               />
             </div>
 
@@ -369,10 +394,14 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
 
       {showEditModal && (
         <AddBookingModal
-          initialBooking={currentBooking}
+          initialBooking={{
+            ...currentBooking,
+            reminders: reminders
+          }}
           initialType={currentBooking.datetime ? 'booking' : 'follow-up'}
           onClose={() => setShowEditModal(false)}
           onAdd={handleEdit}
+          hideServices={true}
         />
       )}
     </div>

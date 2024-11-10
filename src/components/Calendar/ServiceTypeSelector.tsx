@@ -361,7 +361,13 @@ export function ServiceTypeSelector({
   const [showServiceMenu, setShowServiceMenu] = React.useState(false);
   const [selectedType, setSelectedType] = React.useState<ServiceType | null>(null);
   const [editingServiceId, setEditingServiceId] = React.useState<string | null>(null);
+  const [localServices, setLocalServices] = React.useState(selectedServices);
   const menuRef = React.useRef<HTMLDivElement>(null);
+
+  // Keep local services in sync with prop updates
+  React.useEffect(() => {
+    setLocalServices(selectedServices);
+  }, [selectedServices]);
 
   const handleServiceSelect = (type: ServiceType) => {
     setSelectedType(type);
@@ -404,12 +410,19 @@ export function ServiceTypeSelector({
 
   const handleDeleteService = () => {
     if (editingServiceId) {
+      // Optimistically update local state
+      setLocalServices(prev => prev.filter(s => s.id !== editingServiceId));
+      
+      // Find the service to delete
       const serviceToDelete = selectedServices.find(s => s.id === editingServiceId);
       if (serviceToDelete) {
-        onToggleService(serviceToDelete); // Will be handled as removal in parent
+        // Close the modal immediately
+        setEditingServiceId(null);
+        setSelectedType(null);
+        
+        // Trigger the actual deletion in the background
+        onToggleService(serviceToDelete);
       }
-      setEditingServiceId(null);
-      setSelectedType(null);
     }
   };
 
@@ -448,9 +461,9 @@ export function ServiceTypeSelector({
         )}
       </div>
 
-      {/* Selected Services Grid - Always use 3 columns */}
+      {/* Selected Services Grid - Using localServices for immediate feedback */}
       <div className="grid grid-cols-3 gap-2">
-        {selectedServices.map((service) => (
+        {localServices.map((service) => (
           <ServiceCard
             key={service.id}
             type={service.type}

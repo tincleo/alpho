@@ -192,12 +192,31 @@ export async function updateBooking(booking: Booking) {
 
     // Insert all services as new entries
     if (booking.services.length > 0) {
-      const servicesData = booking.services.map(service => ({
-        id: generateUUID(), // Always generate new UUID for services
-        prospect_id: booking.id,
-        type: service.type,
-        details: service.details[service.type]
-      }));
+      const servicesData = booking.services.map(service => {
+        // Ensure we have valid details object
+        const details = service.details[service.type] || {};
+        
+        // Add default values based on service type
+        const defaultDetails = {
+          'couch': { material: 'fabric', seats: 7 },
+          'carpet': { size: 'medium', quantity: 1 },
+          'auto-detailing': { cleaningMode: 'seats-only', seats: 5 },
+          'mattress': { size: 'medium', quantity: 1 }
+        };
+
+        // Merge default details with provided details
+        const finalDetails = {
+          ...defaultDetails[service.type],
+          ...details
+        };
+
+        return {
+          id: generateUUID(),
+          prospect_id: booking.id,
+          type: service.type,
+          details: finalDetails  // Use the merged details
+        };
+      });
 
       // Insert services one by one to avoid potential conflicts
       for (const serviceData of servicesData) {

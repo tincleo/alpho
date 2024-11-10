@@ -11,6 +11,7 @@ interface AddBookingModalProps {
   selectedDate?: Date;
   initialBooking?: Booking;
   initialType?: 'booking' | 'follow-up';
+  hideServices?: boolean;
 }
 
 const LOCATIONS: Location[] = [
@@ -42,7 +43,7 @@ const formatPhoneNumber = (value: string) => {
   return `${numbers.slice(0, 3)} ${numbers.slice(3, 5)} ${numbers.slice(5, 7)} ${numbers.slice(7)}`;
 };
 
-export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, initialType }: AddBookingModalProps) {
+export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, initialType, hideServices = false }: AddBookingModalProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [selectedServices, setSelectedServices] = React.useState<ServiceInstance[]>(
     initialBooking?.services.map(s => ({
@@ -263,12 +264,14 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
               onRefresh={async () => {}}
             />
 
-            <ServiceTypeSelector
-              selectedServices={selectedServices}
-              serviceDetails={serviceDetails}
-              onToggleService={handleServiceToggle}
-              onUpdateDetails={handleServiceDetailsUpdate}
-            />
+            {!hideServices && (
+              <ServiceTypeSelector
+                selectedServices={selectedServices}
+                serviceDetails={serviceDetails}
+                onToggleService={handleServiceToggle}
+                onUpdateDetails={handleServiceDetailsUpdate}
+              />
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div>
