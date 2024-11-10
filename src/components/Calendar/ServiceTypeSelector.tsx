@@ -362,6 +362,22 @@ export function ServiceTypeSelector({
   };
 
   const handleSaveService = (type: ServiceType, details: ServiceDetails[string]) => {
+    // Check if there's already a service with identical properties
+    const isDuplicate = selectedServices.some(service => {
+      if (service.type !== type) return false;
+      
+      // Compare all properties of the details object
+      const existingDetails = serviceDetails[service.id];
+      return JSON.stringify(existingDetails) === JSON.stringify(details);
+    });
+
+    if (isDuplicate) {
+      // Just close the modal if it's a duplicate
+      setSelectedType(null);
+      setEditingServiceId(null);
+      return;
+    }
+
     if (editingServiceId) {
       // Update existing service
       onUpdateDetails(editingServiceId, details);
