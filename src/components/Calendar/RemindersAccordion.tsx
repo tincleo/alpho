@@ -2,7 +2,7 @@ import React from 'react';
 import { ChevronDown, ChevronUp, Plus, X, Bell, Check } from 'lucide-react';
 import { Reminder } from '../../types/calendar';
 import { format, startOfDay, isBefore, isSameDay, differenceInDays } from 'date-fns';
-import { toggleReminderComplete } from '../../lib/api';
+import { updateReminder } from '../../lib/api';
 
 interface RemindersAccordionProps {
   reminders: Reminder[];
@@ -110,8 +110,8 @@ export function RemindersAccordion({
         r.id === reminder.id ? { ...r, completed: !r.completed } : r
       ));
 
-      // Update in database
-      await toggleReminderComplete(reminder.id, !reminder.completed);
+      // Update in database using updateReminder instead of toggleReminderComplete
+      await updateReminder(reminder.id, !reminder.completed);
       await onRefresh();
     } catch (error) {
       // Revert local state on error

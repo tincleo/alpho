@@ -1,4 +1,4 @@
-export type ServiceType = 'couch' | 'carpet' | 'auto_detailing' | 'mattress';
+export type ServiceType = 'couch' | 'carpet' | 'auto-detailing' | 'mattress';
 
 export interface ServiceDetails {
   [key: string]: {

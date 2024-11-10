@@ -69,23 +69,10 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
   const handleEdit = async (updatedBooking: Omit<Booking, 'id'>) => {
     try {
       setIsLoading(true);
-      const services = selectedServices.map(service => ({
-        id: service.id,
-        type: service.type,
-        details: {
-          [service.type]: serviceDetails[service.id]
-        }
-      }));
-
-      const fullBooking = { 
+      await onEdit({ 
         ...updatedBooking, 
-        id: currentBooking.id,
-        reminders: reminders,
-        services
-      };
-      
-      await onEdit(fullBooking);
-      setCurrentBooking(fullBooking as Booking);
+        id: booking.id,
+      });
       setShowEditModal(false);
     } catch {
       setError('Failed to update prospect');
