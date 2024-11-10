@@ -75,11 +75,18 @@ function ServiceCard({
 
   return (
     <button
-      onClick={!readOnly ? onEdit : undefined}
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!readOnly) {
+          onEdit();
+        }
+      }}
       className={`w-full p-3 rounded-lg border text-left transition-colors ${
         readOnly 
           ? 'border-gray-200 bg-gray-50'
-          : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
+          : 'border-blue-100 bg-blue-50/50 hover:bg-blue-50 hover:border-blue-200'
       }`}
     >
       <div className="font-medium text-sm text-gray-900">{getLabel()}</div>
