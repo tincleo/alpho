@@ -425,10 +425,8 @@ export function ServiceTypeSelector({
         )}
       </div>
 
-      {/* Selected Services Grid */}
-      <div className={`grid gap-2 ${
-        selectedServices.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
-      }`}>
+      {/* Selected Services Grid - Always use 3 columns */}
+      <div className="grid grid-cols-3 gap-2">
         {selectedServices.map((service) => (
           <ServiceCard
             key={service.id}
