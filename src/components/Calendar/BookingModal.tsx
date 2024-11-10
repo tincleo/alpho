@@ -30,26 +30,34 @@ const priorityColors = {
 export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateReminder }: BookingModalProps) {
   const [showEditModal, setShowEditModal] = React.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  const [currentBooking, setCurrentBooking] = React.useState(booking);
   const [reminders, setReminders] = React.useState<Reminder[]>(booking.reminders || []);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [showPhoneMenu, setShowPhoneMenu] = React.useState(false);
   const phoneMenuRef = React.useRef<HTMLDivElement>(null);
-  const [currentBooking, setCurrentBooking] = React.useState(booking);
-  const [selectedServices, setSelectedServices] = React.useState<ServiceInstance[]>(
-    booking.services.map(s => ({
-      id: s.id,
-      type: s.type,
-      details: s.details[s.type]
-    }))
-  );
-  const [serviceDetails, setServiceDetails] = React.useState<Record<string, ServiceDetails[string]>>(
-    booking.services.reduce((acc, s) => ({
-      ...acc,
-      [s.id]: s.details[s.type]
-    }), {})
-  );
 
+  const handleEdit = async (updatedBooking: Omit<Booking, 'id'>) => {
+    try {
+      setIsLoading(true);
+      const fullBooking = { 
+        ...updatedBooking, 
+        id: currentBooking.id,
+      };
+      await onEdit(fullBooking as Booking);
+      
+      // Update the current booking state with the new data
+      setCurrentBooking(fullBooking as Booking);
+      setReminders(fullBooking.reminders);
+      setShowEditModal(false);
+    } catch {
+      setError('Failed to update prospect');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Keep local state in sync with prop updates
   React.useEffect(() => {
     setCurrentBooking(booking);
     setReminders(booking.reminders || []);
@@ -65,21 +73,6 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const handleEdit = async (updatedBooking: Omit<Booking, 'id'>) => {
-    try {
-      setIsLoading(true);
-      await onEdit({ 
-        ...updatedBooking, 
-        id: booking.id,
-      });
-      setShowEditModal(false);
-    } catch {
-      setError('Failed to update prospect');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleDelete = async () => {
     try {
@@ -135,50 +128,29 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
   };
 
   const handleServiceToggle = (service: ServiceInstance) => {
-    if (selectedServices.some(s => s.id === service.id)) {
+    if (currentBooking.services.some(s => s.id === service.id)) {
       // Remove service
-      setSelectedServices(prev => prev.filter(s => s.id !== service.id));
-      setServiceDetails(prev => {
-        const newDetails = { ...prev };
-        delete newDetails[service.id];
-        return newDetails;
-      });
+      setCurrentBooking(prev => ({
+        ...prev,
+        services: prev.services.filter(s => s.id !== service.id)
+      }));
     } else {
       // Add new service
-      setSelectedServices(prev => [...prev, service]);
-      setServiceDetails(prev => ({
+      setCurrentBooking(prev => ({
         ...prev,
-        [service.id]: service.details
+        services: [...prev.services, service]
       }));
     }
-
-    // Update the current booking with new services
-    setCurrentBooking(prev => ({
-      ...prev,
-      services: selectedServices.map(service => ({
-        id: service.id,
-        type: service.type,
-        details: {
-          [service.type]: serviceDetails[service.id]
-        }
-      }))
-    }));
   };
 
   const handleServiceDetailsUpdate = (serviceId: string, details: ServiceDetails[string]) => {
-    setServiceDetails(prev => ({
-      ...prev,
-      [serviceId]: details
-    }));
-
-    // Update the current booking with updated service details
     setCurrentBooking(prev => ({
       ...prev,
-      services: selectedServices.map(service => ({
-        id: service.id,
-        type: service.type,
+      services: prev.services.map(service => ({
+        ...service,
         details: {
-          [service.type]: service.id === serviceId ? details : serviceDetails[service.id]
+          ...service.details,
+          [service.type]: service.id === serviceId ? details : service.details[service.type]
         }
       }))
     }));
@@ -242,8 +214,11 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
                 Services
               </label>
               <ServiceTypeSelector
-                selectedServices={selectedServices}
-                serviceDetails={serviceDetails}
+                selectedServices={currentBooking.services}
+                serviceDetails={currentBooking.services.reduce((acc, s) => ({
+                  ...acc,
+                  [s.id]: s.details[s.type]
+                }), {})}
                 onToggleService={handleServiceToggle}
                 onUpdateDetails={handleServiceDetailsUpdate}
                 readOnly
@@ -394,10 +369,7 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
 
       {showEditModal && (
         <AddBookingModal
-          initialBooking={{
-            ...currentBooking,
-            reminders: reminders
-          }}
+          initialBooking={currentBooking}
           initialType={currentBooking.datetime ? 'booking' : 'follow-up'}
           onClose={() => setShowEditModal(false)}
           onAdd={handleEdit}
