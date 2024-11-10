@@ -1,11 +1,12 @@
-export type ServiceType = 'couch' | 'carpet' | 'car-seats' | 'mattress';
+export type ServiceType = 'couch' | 'carpet' | 'auto-detailing' | 'mattress';
 
 export interface ServiceDetails {
   [key: string]: {
     size?: string;
     material?: string;
-    stains?: boolean;
     quantity?: number;
+    seats?: number;
+    cleaningMode?: 'seats-only' | 'full-interior' | 'gold-cleaning';
   };
 }
 

@@ -36,6 +36,19 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
   const [showPhoneMenu, setShowPhoneMenu] = React.useState(false);
   const phoneMenuRef = React.useRef<HTMLDivElement>(null);
   const [currentBooking, setCurrentBooking] = React.useState(booking);
+  const [selectedServices, setSelectedServices] = React.useState<ServiceInstance[]>(
+    booking.services.map(s => ({
+      id: s.id,
+      type: s.type,
+      details: s.details[s.type]
+    }))
+  );
+  const [serviceDetails, setServiceDetails] = React.useState<Record<string, ServiceDetails[string]>>(
+    booking.services.reduce((acc, s) => ({
+      ...acc,
+      [s.id]: s.details[s.type]
+    }), {})
+  );
 
   React.useEffect(() => {
     setCurrentBooking(booking);
@@ -125,6 +138,32 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
     }
   };
 
+  const handleServiceToggle = (service: ServiceInstance) => {
+    if (selectedServices.some(s => s.id === service.id)) {
+      // Remove service
+      setSelectedServices(prev => prev.filter(s => s.id !== service.id));
+      setServiceDetails(prev => {
+        const newDetails = { ...prev };
+        delete newDetails[service.id];
+        return newDetails;
+      });
+    } else {
+      // Add new service
+      setSelectedServices(prev => [...prev, service]);
+      setServiceDetails(prev => ({
+        ...prev,
+        [service.id]: service.details
+      }));
+    }
+  };
+
+  const handleServiceDetailsUpdate = (serviceId: string, details: ServiceDetails[string]) => {
+    setServiceDetails(prev => ({
+      ...prev,
+      [serviceId]: details
+    }));
+  };
+
   if (error) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -183,13 +222,10 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
                 Services
               </label>
               <ServiceTypeSelector
-                selectedServices={currentBooking.services.map(s => s.type)}
-                serviceDetails={currentBooking.services.reduce((acc, service) => ({
-                  ...acc,
-                  [service.type]: service.details[service.type]
-                }), {})}
-                onToggleService={() => {}}
-                onUpdateDetails={() => {}}
+                selectedServices={selectedServices}
+                serviceDetails={serviceDetails}
+                onToggleService={handleServiceToggle}
+                onUpdateDetails={handleServiceDetailsUpdate}
                 readOnly
               />
             </div>

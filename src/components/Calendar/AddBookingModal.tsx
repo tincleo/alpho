@@ -44,13 +44,17 @@ const formatPhoneNumber = (value: string) => {
 
 export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, initialType }: AddBookingModalProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [selectedServices, setSelectedServices] = React.useState<ServiceType[]>(
-    initialBooking?.services.map(s => s.type) ?? []
+  const [selectedServices, setSelectedServices] = React.useState<ServiceInstance[]>(
+    initialBooking?.services.map(s => ({
+      id: s.id,
+      type: s.type,
+      details: s.details[s.type]
+    })) ?? []
   );
-  const [serviceDetails, setServiceDetails] = React.useState<ServiceDetails>(
-    initialBooking?.services.reduce((acc, service) => ({
+  const [serviceDetails, setServiceDetails] = React.useState<Record<string, ServiceDetails[string]>>(
+    initialBooking?.services.reduce((acc, s) => ({
       ...acc,
-      [service.type]: service.details[service.type]
+      [s.id]: s.details[s.type]
     }), {}) ?? {}
   );
   const [formData, setFormData] = React.useState({
@@ -90,25 +94,29 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
     );
   }, [locationSearch]);
 
-  const handleServiceToggle = (type: ServiceType) => {
-    setSelectedServices(prev => {
-      if (prev.includes(type)) {
-        const newServices = prev.filter(t => t !== type);
-        setServiceDetails(prevDetails => {
-          const newDetails = { ...prevDetails };
-          delete newDetails[type];
-          return newDetails;
-        });
-        return newServices;
-      }
-      return [...prev, type];
-    });
+  const handleServiceToggle = (service: ServiceInstance) => {
+    if (selectedServices.some(s => s.id === service.id)) {
+      // Remove service
+      setSelectedServices(prev => prev.filter(s => s.id !== service.id));
+      setServiceDetails(prev => {
+        const newDetails = { ...prev };
+        delete newDetails[service.id];
+        return newDetails;
+      });
+    } else {
+      // Add new service
+      setSelectedServices(prev => [...prev, service]);
+      setServiceDetails(prev => ({
+        ...prev,
+        [service.id]: service.details
+      }));
+    }
   };
 
-  const handleServiceDetailsUpdate = (type: ServiceType, details: ServiceDetails) => {
+  const handleServiceDetailsUpdate = (serviceId: string, details: ServiceDetails[string]) => {
     setServiceDetails(prev => ({
       ...prev,
-      [type]: details[type]
+      [serviceId]: details
     }));
   };
 
@@ -150,11 +158,12 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
       return;
     }
 
-    const services = selectedServices.map(type => ({
-      id: initialBooking?.services.find(s => s.type === type)?.id || generateUUID(),
-      type,
+    // Create services array with proper structure
+    const services = selectedServices.map(service => ({
+      id: service.id,
+      type: service.type,
       details: {
-        [type]: serviceDetails[type] || {}
+        [service.type]: serviceDetails[service.id]
       }
     }));
 

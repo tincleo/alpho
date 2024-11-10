@@ -1,131 +1,461 @@
 import React from 'react';
+import { Plus, X, Settings } from 'lucide-react';
 import { ServiceType, ServiceDetails } from '../../types/calendar';
-import { ServiceDetailsPopover } from './ServiceDetailsPopover';
 
-interface ServiceTypeSelectorProps {
-  selectedServices: ServiceType[];
-  serviceDetails: ServiceDetails;
-  onToggleService: (type: ServiceType) => void;
-  onUpdateDetails: (type: ServiceType, details: ServiceDetails) => void;
-  readOnly?: boolean;
-  detailsOptional?: boolean;
+interface ServiceInstance {
+  id: string;
+  type: ServiceType;
+  details: ServiceDetails[string];
 }
 
-const SERVICE_TYPES: Record<ServiceType, string> = {
-  'couch': 'Couch Cleaning',
-  'carpet': 'Carpet Cleaning',
-  'car-seats': 'Car Seats Cleaning',
-  'mattress': 'Mattress Cleaning'
-};
+interface ServiceTypeSelectorProps {
+  selectedServices: ServiceInstance[];
+  serviceDetails: Record<string, ServiceDetails[string]>;
+  onToggleService: (service: ServiceInstance) => void;
+  onUpdateDetails: (serviceId: string, details: ServiceDetails[string]) => void;
+  readOnly?: boolean;
+}
 
-const getServiceSummary = (type: ServiceType, details: ServiceDetails): string => {
-  switch (type) {
-    case 'couch':
-      return details.couch 
-        ? `${details.couch.type}, ${details.couch.seats} seats`
-        : '';
-    case 'carpet':
-      return details.carpet
-        ? `${details.carpet.size} size${details.carpet.quantity > 1 ? `, ${details.carpet.quantity} items` : ''}`
-        : '';
-    case 'car-seats':
-      return details['car-seats']
-        ? `${details['car-seats'].seats} seats`
-        : '';
-    case 'mattress':
-      return details.mattress
-        ? `${details.mattress.size} size${details.mattress.quantity > 1 ? `, ${details.mattress.quantity} items` : ''}`
-        : '';
-    default:
-      return '';
-  }
-};
+interface ServiceCardProps {
+  type: ServiceType;
+  details: ServiceDetails[string];
+  onEdit: () => void;
+  readOnly?: boolean;
+}
 
-export function ServiceTypeSelector({ 
-  selectedServices, 
-  serviceDetails,
-  onToggleService, 
-  onUpdateDetails,
-  readOnly = false,
-  detailsOptional = false
-}: ServiceTypeSelectorProps) {
-  const [activePopover, setActivePopover] = React.useState<ServiceType | null>(null);
-  const buttonRefs = React.useRef<Record<ServiceType, HTMLButtonElement | null>>({
-    'couch': null,
-    'carpet': null,
-    'car-seats': null,
-    'mattress': null
+const SERVICE_OPTIONS: { type: ServiceType; label: string }[] = [
+  { type: 'couch', label: 'Couch Cleaning' },
+  { type: 'carpet', label: 'Carpet Cleaning' },
+  { type: 'auto-detailing', label: 'Auto Detailing' },
+  { type: 'mattress', label: 'Mattress Cleaning' }
+];
+
+function ServiceCard({
+  type,
+  details,
+  onEdit,
+  readOnly
+}: ServiceCardProps) {
+  const getLabel = () => {
+    switch (type) {
+      case 'couch': return 'Couch Cleaning';
+      case 'carpet': return 'Carpet Cleaning';
+      case 'auto-detailing': return 'Auto Detailing';
+      case 'mattress': return 'Mattress Cleaning';
+      default: return type;
+    }
+  };
+
+  const getDetails = () => {
+    if (!details) return '';
+
+    switch (type) {
+      case 'couch':
+        return `${details.material ? details.material.charAt(0).toUpperCase() + details.material.slice(1) : ''}, ${details.seats || 0} Seats`;
+      
+      case 'carpet':
+      case 'mattress':
+        const size = details.size ? details.size.charAt(0).toUpperCase() + details.size.slice(1) : '';
+        return `${size}, Qty: ${details.quantity || 1}`;
+      
+      case 'auto-detailing':
+        const mode = details.cleaningMode ? 
+          details.cleaningMode.split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ') 
+          : '';
+        return `${mode}, ${details.seats || 0} Seats`;
+      
+      default:
+        return '';
+    }
+  };
+
+  const detailsText = getDetails();
+
+  return (
+    <button
+      onClick={!readOnly ? onEdit : undefined}
+      className={`w-full p-3 rounded-lg border text-left transition-colors ${
+        readOnly 
+          ? 'border-gray-200 bg-gray-50'
+          : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
+      }`}
+    >
+      <div className="font-medium text-sm text-gray-900">{getLabel()}</div>
+      {detailsText && (
+        <div className="mt-0.5 text-xs text-gray-600">
+          {detailsText}
+        </div>
+      )}
+    </button>
+  );
+}
+
+interface ServiceOptionsModalProps {
+  type: ServiceType;
+  onClose: () => void;
+  onSave: (type: ServiceType, details: ServiceDetails[string]) => void;
+  onDelete?: () => void;
+  isEditing?: boolean;
+}
+
+// Add this helper component for number inputs
+interface NumberInputProps {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  label: string;
+}
+
+function NumberInput({ value, onChange, min = 1, label }: NumberInputProps) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        {label}
+      </label>
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={() => value > min && onChange(value - 1)}
+          className="w-10 px-3 py-1 border rounded-l-lg hover:bg-gray-50 transition-colors flex items-center justify-center"
+        >
+          -
+        </button>
+        <input
+          type="number"
+          min={min}
+          value={value}
+          onChange={(e) => onChange(parseInt(e.target.value) || min)}
+          className="w-16 px-2 py-1 border-t border-b text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          type="button"
+          onClick={() => onChange(value + 1)}
+          className="w-10 px-3 py-1 border rounded-r-lg hover:bg-gray-50 transition-colors flex items-center justify-center"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ServiceOptionsModal({ 
+  type, 
+  onClose, 
+  onSave,
+  onDelete,
+  isEditing = false
+}: ServiceOptionsModalProps) {
+  const [details, setDetails] = React.useState<ServiceDetails[string]>(() => {
+    // Set default values based on service type
+    switch (type) {
+      case 'couch':
+        return { material: 'fabric', seats: 7 };
+      case 'carpet':
+        return { size: 'medium', quantity: 1 };
+      case 'auto-detailing':
+        return { seats: 5, cleaningMode: 'seats-only' };
+      case 'mattress':
+        return { size: 'medium', quantity: 1 };
+      default:
+        return {};
+    }
   });
 
-  const filteredServices = readOnly 
-    ? selectedServices 
-    : Object.keys(SERVICE_TYPES) as ServiceType[];
+  const handleSave = () => {
+    onSave(type, details);
+    onClose();
+  };
 
-  const handleServiceClick = (type: ServiceType) => {
-    if (readOnly) return;
-    
-    if (!selectedServices.includes(type)) {
-      onToggleService(type);
-      if (!detailsOptional) {
-        setActivePopover(type);
-      }
-    } else {
-      setActivePopover(type);
+  const getLabel = () => {
+    switch (type) {
+      case 'couch': return 'Couch Cleaning';
+      case 'carpet': return 'Carpet Cleaning';
+      case 'auto-detailing': return 'Auto Detailing';
+      case 'mattress': return 'Mattress Cleaning';
+      default: return type;
     }
   };
 
-  const handleDetailsSubmit = (type: ServiceType, details: ServiceDetails) => {
-    onUpdateDetails(type, details);
-    setActivePopover(null);
-  };
+  const renderFields = () => {
+    switch (type) {
+      case 'couch':
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Material
+              </label>
+              <div className="flex gap-2">
+                {['fabric', 'leather'].map((material) => (
+                  <button
+                    key={material}
+                    type="button"
+                    onClick={() => setDetails(prev => ({ ...prev, material }))}
+                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      details.material === material
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {material.charAt(0).toUpperCase() + material.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <NumberInput
+              value={details.seats || 7}
+              onChange={(value) => setDetails(prev => ({ ...prev, seats: value }))}
+              min={1}
+              label="Number of Seats"
+            />
+          </div>
+        );
 
-  const handlePopoverClose = (type: ServiceType) => {
-    if (!detailsOptional && !serviceDetails[type]) {
-      onToggleService(type); // Deselect if details are required but not provided
+      case 'carpet':
+      case 'mattress':
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Size
+              </label>
+              <div className="flex gap-2">
+                {['small', 'medium', 'large'].map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => setDetails(prev => ({ ...prev, size }))}
+                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      details.size === size
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {size.charAt(0).toUpperCase() + size.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <NumberInput
+              value={details.quantity || 1}
+              onChange={(value) => setDetails(prev => ({ ...prev, quantity: value }))}
+              min={1}
+              label="Quantity"
+            />
+          </div>
+        );
+
+      case 'auto-detailing':
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Cleaning Mode
+              </label>
+              <div className="flex gap-2">
+                {[
+                  { value: 'seats-only', label: 'Seats Only' },
+                  { value: 'full-interior', label: 'Full Interior' },
+                  { value: 'gold-cleaning', label: 'Gold Cleaning' }
+                ].map((mode) => (
+                  <button
+                    key={mode.value}
+                    type="button"
+                    onClick={() => setDetails(prev => ({ 
+                      ...prev, 
+                      cleaningMode: mode.value as ServiceDetails[string]['cleaningMode']
+                    }))}
+                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      details.cleaningMode === mode.value
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <NumberInput
+              value={details.seats || 5}
+              onChange={(value) => setDetails(prev => ({ ...prev, seats: value }))}
+              min={1}
+              label="Number of Seats"
+            />
+          </div>
+        );
+
+      default:
+        return null;
     }
-    setActivePopover(null);
-  };
-
-  const handleClearService = (type: ServiceType) => {
-    onToggleService(type);
-    setActivePopover(null);
   };
 
   return (
-    <div className="grid grid-cols-2 gap-2 w-full">
-      {filteredServices.map((value) => (
-        <div key={value} className="relative">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h3 className="text-lg font-medium text-gray-900">
+            {isEditing ? 'Edit' : 'Add'} {getLabel()}
+          </h3>
           <button
-            ref={el => buttonRefs.current[value] = el}
-            type="button"
-            onClick={() => handleServiceClick(value)}
-            className={`w-full p-2 sm:p-2.5 text-sm rounded-lg border transition-colors ${
-              selectedServices.includes(value)
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-300 hover:border-gray-400'
-            }`}
-            disabled={readOnly}
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <span className="block font-medium">{SERVICE_TYPES[value]}</span>
-            {selectedServices.includes(value) && serviceDetails[value] && (
-              <span className="block text-xs mt-1 text-gray-600">
-                {getServiceSummary(value, serviceDetails)}
-              </span>
-            )}
+            <X className="w-5 h-5 text-gray-500" />
           </button>
-
-          {!readOnly && activePopover === value && buttonRefs.current[value] && (
-            <ServiceDetailsPopover
-              serviceType={value}
-              details={serviceDetails}
-              onSubmit={handleDetailsSubmit}
-              onClose={() => handlePopoverClose(value)}
-              onClear={() => handleClearService(value)}
-              targetElement={buttonRefs.current[value]!}
-            />
-          )}
         </div>
-      ))}
+
+        <div className="p-4">
+          {renderFields()}
+        </div>
+
+        <div className="flex justify-between items-center p-4 border-t">
+          {isEditing && onDelete ? (
+            <button
+              onClick={onDelete}
+              className="text-sm text-red-600 hover:text-red-700"
+            >
+              Delete
+            </button>
+          ) : (
+            <div></div>
+          )}
+          
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+            >
+              {isEditing ? 'Save Changes' : 'Add Service'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function ServiceTypeSelector({
+  selectedServices,
+  serviceDetails,
+  onToggleService,
+  onUpdateDetails,
+  readOnly
+}: ServiceTypeSelectorProps) {
+  const [showServiceMenu, setShowServiceMenu] = React.useState(false);
+  const [selectedType, setSelectedType] = React.useState<ServiceType | null>(null);
+  const [editingServiceId, setEditingServiceId] = React.useState<string | null>(null);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  const handleServiceSelect = (type: ServiceType) => {
+    setSelectedType(type);
+    setShowServiceMenu(false);
+  };
+
+  const handleSaveService = (type: ServiceType, details: ServiceDetails[string]) => {
+    if (editingServiceId) {
+      // Update existing service
+      onUpdateDetails(editingServiceId, details);
+    } else {
+      // Add new service instance
+      const newService: ServiceInstance = {
+        id: `${type}_${Date.now()}`,
+        type,
+        details
+      };
+      onToggleService(newService);
+    }
+
+    setSelectedType(null);
+    setEditingServiceId(null);
+  };
+
+  const handleDeleteService = () => {
+    if (editingServiceId) {
+      const serviceToDelete = selectedServices.find(s => s.id === editingServiceId);
+      if (serviceToDelete) {
+        onToggleService(serviceToDelete); // Will be handled as removal in parent
+      }
+      setEditingServiceId(null);
+      setSelectedType(null);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <label className="block text-sm font-medium text-gray-700">
+          Services <span className="text-red-500">*</span>
+        </label>
+        {!readOnly && (
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setShowServiceMenu(!showServiceMenu)}
+              className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+            >
+              <Plus className="w-4 h-4" />
+              Add service
+            </button>
+
+            {showServiceMenu && (
+              <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                {SERVICE_OPTIONS.map(option => (
+                  <button
+                    key={option.type}
+                    type="button"
+                    onClick={() => handleServiceSelect(option.type)}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Selected Services Grid */}
+      <div className={`grid gap-2 ${
+        selectedServices.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
+      }`}>
+        {selectedServices.map((service) => (
+          <ServiceCard
+            key={service.id}
+            type={service.type}
+            details={serviceDetails[service.id]}
+            onEdit={() => {
+              setEditingServiceId(service.id);
+              setSelectedType(service.type);
+            }}
+            readOnly={readOnly}
+          />
+        ))}
+      </div>
+
+      {/* Service Options Modal */}
+      {selectedType && (
+        <ServiceOptionsModal
+          type={selectedType}
+          onClose={() => {
+            setSelectedType(null);
+            setEditingServiceId(null);
+          }}
+          onSave={handleSaveService}
+          onDelete={editingServiceId ? handleDeleteService : undefined}
+          isEditing={!!editingServiceId}
+        />
+      )}
     </div>
   );
 }
