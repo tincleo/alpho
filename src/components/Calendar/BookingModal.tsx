@@ -36,6 +36,7 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
   const [error, setError] = React.useState<string | null>(null);
   const [showPhoneMenu, setShowPhoneMenu] = React.useState(false);
   const phoneMenuRef = React.useRef<HTMLDivElement>(null);
+  const [localServices, setLocalServices] = React.useState(booking.services);
 
   const handleEdit = async (updatedBooking: Omit<Booking, 'id'>) => {
     try {
@@ -61,6 +62,7 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
   React.useEffect(() => {
     setCurrentBooking(booking);
     setReminders(booking.reminders || []);
+    setLocalServices(booking.services);
   }, [booking]);
 
   React.useEffect(() => {
@@ -129,18 +131,18 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
 
   const handleServiceToggle = async (service: ServiceInstance) => {
     try {
-      setIsLoading(true);
-      let updatedServices;
+      // Optimistically update local state
+      const updatedServices = currentBooking.services.some(s => s.id === service.id)
+        ? localServices.filter(s => s.id !== service.id) // Remove service
+        : [...localServices, {  // Add service
+            id: service.id,
+            type: service.type,
+            details: { [service.type]: service.details }
+          }];
+      
+      setLocalServices(updatedServices);
 
-      if (currentBooking.services.some(s => s.id === service.id)) {
-        // Remove service
-        updatedServices = currentBooking.services.filter(s => s.id !== service.id);
-      } else {
-        // Add new service
-        updatedServices = [...currentBooking.services, service];
-      }
-
-      // Update booking with new services
+      // Update in background
       const updatedBooking = {
         ...currentBooking,
         services: updatedServices
@@ -149,23 +151,26 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
       await onEdit(updatedBooking);
       setCurrentBooking(updatedBooking);
     } catch (error) {
+      // Revert on error
+      setLocalServices(currentBooking.services);
       setError('Failed to update services');
       console.error('Failed to update services:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleServiceDetailsUpdate = async (serviceId: string, details: ServiceDetails[string]) => {
     try {
-      setIsLoading(true);
-      const updatedServices = currentBooking.services.map(service => 
+      // Optimistically update local state
+      const updatedServices = localServices.map(service => 
         service.id === serviceId ? {
           ...service,
           details: { [service.type]: details }
         } : service
       );
+      
+      setLocalServices(updatedServices);
 
+      // Update in background
       const updatedBooking = {
         ...currentBooking,
         services: updatedServices
@@ -174,10 +179,10 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
       await onEdit(updatedBooking);
       setCurrentBooking(updatedBooking);
     } catch (error) {
+      // Revert on error
+      setLocalServices(currentBooking.services);
       setError('Failed to update service details');
       console.error('Failed to update service details:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -233,21 +238,20 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
               onRefresh={handleRefresh}
             />
 
-            {/* Services - Now editable directly */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Services
-              </label>
-              <ServiceTypeSelector
-                selectedServices={currentBooking.services}
-                serviceDetails={currentBooking.services.reduce((acc, s) => ({
-                  ...acc,
-                  [s.id]: s.details[s.type]
-                }), {})}
-                onToggleService={handleServiceToggle}
-                onUpdateDetails={handleServiceDetailsUpdate}
-                readOnly={false}
-              />
+            {/* Services - Updated styling */}
+            <div className="border rounded-lg overflow-visible">
+              <div className="p-4">
+                <ServiceTypeSelector
+                  selectedServices={localServices}
+                  serviceDetails={localServices.reduce((acc, s) => ({
+                    ...acc,
+                    [s.id]: s.details[s.type]
+                  }), {})}
+                  onToggleService={handleServiceToggle}
+                  onUpdateDetails={handleServiceDetailsUpdate}
+                  readOnly={false}
+                />
+              </div>
             </div>
 
             {/* Status and Priority */}

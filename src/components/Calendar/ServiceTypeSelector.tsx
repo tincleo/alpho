@@ -24,10 +24,10 @@ interface ServiceCardProps {
 }
 
 const SERVICE_OPTIONS: { type: ServiceType; label: string }[] = [
-  { type: 'couch', label: 'Couch Cleaning' },
-  { type: 'carpet', label: 'Carpet Cleaning' },
-  { type: 'auto-detailing', label: 'Auto Detailing' },
-  { type: 'mattress', label: 'Mattress Cleaning' }
+  { type: 'couch', label: 'Couch' },
+  { type: 'carpet', label: 'Carpet' },
+  { type: 'auto-detailing', label: 'Auto' },
+  { type: 'mattress', label: 'Mattress' }
 ];
 
 function ServiceCard({
@@ -38,10 +38,10 @@ function ServiceCard({
 }: ServiceCardProps) {
   const getLabel = () => {
     switch (type) {
-      case 'couch': return 'Couch Cleaning';
-      case 'carpet': return 'Carpet Cleaning';
-      case 'auto-detailing': return 'Auto Detailing';
-      case 'mattress': return 'Mattress Cleaning';
+      case 'couch': return 'Couch';
+      case 'carpet': return 'Carpet';
+      case 'auto-detailing': return 'Auto';
+      case 'mattress': return 'Mattress';
       default: return type;
     }
   };
@@ -51,12 +51,13 @@ function ServiceCard({
 
     switch (type) {
       case 'couch':
-        return `${details.material ? details.material.charAt(0).toUpperCase() + details.material.slice(1) : ''}, ${details.seats || 0} Seats`;
+        const material = details.material?.charAt(0).toUpperCase() + details.material?.slice(1);
+        return `${material}, ${details.seats} Seats`;
       
       case 'carpet':
       case 'mattress':
-        const size = details.size ? details.size.charAt(0).toUpperCase() + details.size.slice(1) : '';
-        return `${size}, Qty: ${details.quantity || 1}`;
+        const size = details.size?.charAt(0).toUpperCase() + details.size?.slice(1);
+        return `${size}, Qty: ${details.quantity}`;
       
       case 'auto-detailing':
         const mode = details.cleaningMode ? 
@@ -64,7 +65,7 @@ function ServiceCard({
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ') 
           : '';
-        return `${mode}, ${details.seats || 0} Seats`;
+        return `${mode}, ${details.seats} Seats`;
       
       default:
         return '';
@@ -156,32 +157,52 @@ function ServiceOptionsModal({
   isEditing = false
 }: ServiceOptionsModalProps) {
   const [details, setDetails] = React.useState<ServiceDetails[string]>(() => {
-    // Set default values based on service type
-    switch (type) {
-      case 'couch':
-        return { material: 'fabric', seats: 7 };
-      case 'carpet':
-        return { size: 'medium', quantity: 1 };
-      case 'auto-detailing':
-        return { seats: 5, cleaningMode: 'seats-only' };
-      case 'mattress':
-        return { size: 'medium', quantity: 1 };
-      default:
-        return {};
-    }
+    const defaultValues = {
+      'couch': { material: 'fabric', seats: 7 },
+      'carpet': { size: 'medium', quantity: 1 },
+      'auto-detailing': { cleaningMode: 'seats-only', seats: 5 },
+      'mattress': { size: 'medium', quantity: 1 }
+    };
+
+    return defaultValues[type];
   });
 
   const handleSave = () => {
+    switch (type) {
+      case 'couch':
+        if (!details.material || !details.seats) {
+          console.log('Current details:', details);
+          alert(`Please fill in all fields. Missing: ${!details.material ? 'Material' : ''} ${!details.seats ? 'Seats' : ''}`);
+          return;
+        }
+        break;
+      case 'carpet':
+      case 'mattress':
+        if (!details.size || !details.quantity) {
+          console.log('Current details:', details);
+          alert(`Please fill in all fields. Missing: ${!details.size ? 'Size' : ''} ${!details.quantity ? 'Quantity' : ''}`);
+          return;
+        }
+        break;
+      case 'auto-detailing':
+        if (!details.cleaningMode || !details.seats) {
+          console.log('Current details:', details);
+          alert(`Please fill in all fields. Missing: ${!details.cleaningMode ? 'Cleaning Mode' : ''} ${!details.seats ? 'Seats' : ''}`);
+          return;
+        }
+        break;
+    }
+
     onSave(type, details);
     onClose();
   };
 
   const getLabel = () => {
     switch (type) {
-      case 'couch': return 'Couch Cleaning';
-      case 'carpet': return 'Carpet Cleaning';
-      case 'auto-detailing': return 'Auto Detailing';
-      case 'mattress': return 'Mattress Cleaning';
+      case 'couch': return 'Couch';
+      case 'carpet': return 'Carpet';
+      case 'auto-detailing': return 'Auto';
+      case 'mattress': return 'Mattress';
       default: return type;
     }
   };

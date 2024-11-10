@@ -3,7 +3,6 @@ import { X, Calendar, UserCheck, ChevronDown, Plus } from 'lucide-react';
 import { format, setHours, setMinutes, parse, addHours } from 'date-fns';
 import { Booking, ServiceType, ServiceDetails, Location, Priority, Reminder } from '../../types/calendar';
 import { ServiceTypeSelector } from './ServiceTypeSelector';
-import { RemindersAccordion } from './RemindersAccordion';
 
 interface AddBookingModalProps {
   onClose: () => void;
@@ -85,9 +84,7 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
   const [showNotes, setShowNotes] = React.useState(!!initialBooking?.notes);
   const [locationSearch, setLocationSearch] = React.useState(initialBooking?.location || '');
   const [showLocationDropdown, setShowLocationDropdown] = React.useState(false);
-  const [reminders, setReminders] = React.useState<Reminder[]>(
-    initialBooking?.reminders || []
-  );
+  const [reminders] = React.useState<Reminder[]>(initialBooking?.reminders || []);
 
   const filteredLocations = React.useMemo(() => {
     return LOCATIONS.filter(location => 
@@ -257,12 +254,6 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
                 </button>
               </div>
             </div>
-
-            <RemindersAccordion
-              reminders={reminders}
-              onChange={setReminders}
-              onRefresh={async () => {}}
-            />
 
             {!hideServices && (
               <ServiceTypeSelector
