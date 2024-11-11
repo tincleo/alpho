@@ -2,14 +2,11 @@ import React, { useState, useCallback } from 'react';
 import { Prospect } from '../../types/calendar';
 import { fetchProspects, updateProspect, deleteProspect, updateReminder } from '../../lib/api';
 import { AgendaView } from './AgendaView';
-import { ProspectModal } from './ProspectModal';
-import { DayProspectsModal } from './DayProspectsModal';
 
 export default function App() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
 
   const loadProspects = useCallback(async () => {
     try {
