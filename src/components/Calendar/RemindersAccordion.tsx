@@ -6,6 +6,7 @@ import { updateReminder } from '../../lib/api';
 
 interface RemindersAccordionProps {
   reminders: Reminder[];
+  prospectId: string;
   onChange: (reminders: Reminder[]) => void;
   onRefresh: () => Promise<void>;
 }
@@ -14,6 +15,7 @@ const MAX_REMINDERS = 5;
 
 export function RemindersAccordion({ 
   reminders, 
+  prospectId,
   onChange,
   onRefresh
 }: RemindersAccordionProps) {
@@ -83,6 +85,7 @@ export function RemindersAccordion({
     
     const newReminder: Reminder = {
       id: `temp_${Math.random().toString(36).substr(2, 9)}`,
+      prospect_id: prospectId,
       datetime: selectedDateTime.toISOString(),
       note: note.trim(),
       completed: false
@@ -104,14 +107,23 @@ export function RemindersAccordion({
 
   const handleComplete = async (reminder: Reminder, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // Don't try to update temporary reminders in the database
+    if (reminder.id.includes('temp_')) {
+      setLocalReminders(prev => prev.map(r => 
+        r.id === reminder.id ? { ...r, completed: !r.completed } : r
+      ));
+      return;
+    }
+
     try {
       // Update local state immediately
       setLocalReminders(prev => prev.map(r => 
         r.id === reminder.id ? { ...r, completed: !r.completed } : r
       ));
 
-      // Update in database - need to pass the prospect_id
-      await updateReminder(reminder.prospect_id, reminder.id, !reminder.completed); // Add prospect_id
+      // Update in database
+      await updateReminder(prospectId, reminder.id, !reminder.completed);
       await onRefresh();
     } catch (error) {
       // Revert local state on error

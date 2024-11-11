@@ -233,8 +233,11 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
           <div className="space-y-6">
             {/* Reminders */}
             <RemindersAccordion
-              reminders={reminders}
-              onChange={handleRemindersChange}
+              reminders={prospect.reminders}
+              prospectId={prospect.id}
+              onChange={(updatedReminders) => {
+                // Handle reminder changes
+              }}
               onRefresh={handleRefresh}
             />
 
