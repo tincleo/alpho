@@ -12,31 +12,31 @@ import {
   setHours,
   setMinutes,
 } from 'date-fns';
-import { BookingPreview } from './ProspectPreview';
-import { BookingModal } from './ProspectModal';
-import { DayBookingsModal } from './DayProspectsModal';
-import { Booking, ViewMode, CalendarCell } from '../../types/calendar';
+import { ProspectPreview } from './ProspectPreview';
+import { ProspectModal } from './ProspectModal';
+import { DayProspectsModal } from './DayProspectsModal';
+import { Prospect, ViewMode, CalendarCell } from '../../types/calendar';
 
 interface CalendarGridProps {
   currentDate: Date;
   viewMode: ViewMode;
-  bookings: Booking[];
-  onAddBooking: (date: Date) => void;
-  onUpdateBooking: (booking: Booking) => Promise<void>;
-  onDeleteBooking: (bookingId: string) => Promise<void>;
+  prospects: Prospect[];
+  onAddProspect: (date: Date) => void;
+  onUpdateProspect: (prospect: Prospect) => Promise<void>;
+  onDeleteProspect: (prospectId: string) => Promise<void>;
 }
 
 export function CalendarGrid({
   currentDate,
   viewMode,
-  bookings,
-  onAddBooking,
-  onUpdateBooking,
-  onDeleteBooking,
+  prospects,
+  onAddProspect,
+  onUpdateProspect,
+  onDeleteProspect,
 }: CalendarGridProps) {
-  const [selectedBooking, setSelectedBooking] = React.useState<Booking | null>(null);
+  const [selectedProspect, setSelectedProspect] = React.useState<Prospect | null>(null);
   const [selectedDay, setSelectedDay] = React.useState<Date | null>(null);
-  const [draggedBooking, setDraggedBooking] = React.useState<Booking | null>(null);
+  const [draggedProspect, setDraggedProspect] = React.useState<Prospect | null>(null);
   const [dropHighlight, setDropHighlight] = React.useState<string | null>(null);
 
   const getDaysToDisplay = () => {
@@ -57,25 +57,25 @@ export function CalendarGrid({
   const cells: CalendarCell[] = days.map((date) => ({
     date,
     isCurrentMonth: isSameMonth(date, currentDate),
-    bookings: bookings.filter((booking) =>
-      isSameDay(new Date(booking.datetime), date)
+    prospects: prospects.filter((prospect) =>
+      isSameDay(new Date(prospect.datetime), date)
     ),
   }));
 
-  const handleDayClick = (date: Date, bookings: Booking[]) => {
-    if (bookings.length > 0 && viewMode === 'month') {
+  const handleDayClick = (date: Date, prospects: Prospect[]) => {
+    if (prospects.length > 0 && viewMode === 'month') {
       setSelectedDay(date);
     } else {
-      onAddBooking(date);
+      onAddProspect(date);
     }
   };
 
-  const handleDragStart = (booking: Booking) => {
-    setDraggedBooking(booking);
+  const handleDragStart = (prospect: Prospect) => {
+    setDraggedProspect(prospect);
   };
 
   const handleDragEnd = () => {
-    setDraggedBooking(null);
+    setDraggedProspect(null);
     setDropHighlight(null);
   };
 
@@ -91,20 +91,20 @@ export function CalendarGrid({
 
   const handleDrop = (e: React.DragEvent, date: Date) => {
     e.preventDefault();
-    if (draggedBooking) {
-      const originalDate = new Date(draggedBooking.datetime);
+    if (draggedProspect) {
+      const originalDate = new Date(draggedProspect.datetime);
       const newDate = setMinutes(
         setHours(date, originalDate.getHours()),
         originalDate.getMinutes()
       );
 
-      onUpdateBooking({
-        ...draggedBooking,
+      onUpdateProspect({
+        ...draggedProspect,
         datetime: newDate.toISOString(),
       });
     }
     setDropHighlight(null);
-    setDraggedBooking(null);
+    setDraggedProspect(null);
   };
 
   return (
@@ -125,7 +125,7 @@ export function CalendarGrid({
         {cells.map((cell, idx) => (
           <div
             key={idx}
-            onClick={() => handleDayClick(cell.date, cell.bookings)}
+            onClick={() => handleDayClick(cell.date, cell.prospects)}
             onDragOver={(e) => handleDragOver(e, cell.date)}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, cell.date)}
@@ -143,22 +143,22 @@ export function CalendarGrid({
               >
                 {format(cell.date, viewMode === 'week' ? 'EEE d' : 'd')}
               </span>
-              {cell.bookings.length > 2 && viewMode === 'month' && (
+              {cell.prospects.length > 2 && viewMode === 'month' && (
                 <span className="text-xs text-gray-500 md:hidden">
-                  +{cell.bookings.length - 2}
+                  +{cell.prospects.length - 2}
                 </span>
               )}
             </div>
             <div className="space-y-1">
-              {cell.bookings
+              {cell.prospects
                 .slice(0, viewMode === 'month' ? (window.innerWidth < 768 ? 2 : undefined) : undefined)
-                .map((booking) => (
-                  <BookingPreview
-                    key={booking.id}
-                    booking={booking}
+                .map((prospect) => (
+                  <ProspectPreview
+                    key={prospect.id}
+                    prospect={prospect}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSelectedBooking(booking);
+                      setSelectedProspect(prospect);
                     }}
                     onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
@@ -171,24 +171,24 @@ export function CalendarGrid({
         ))}
       </div>
 
-      {selectedBooking && (
-        <BookingModal
-          booking={selectedBooking}
-          onClose={() => setSelectedBooking(null)}
-          onEdit={onUpdateBooking}
-          onDelete={onDeleteBooking}
+      {selectedProspect && (
+        <ProspectModal
+          prospect={selectedProspect}
+          onClose={() => setSelectedProspect(null)}
+          onEdit={onUpdateProspect}
+          onDelete={onDeleteProspect}
         />
       )}
 
       {selectedDay && (
-        <DayBookingsModal
+        <DayProspectsModal
           date={selectedDay}
-          bookings={bookings.filter((booking) =>
-            isSameDay(new Date(booking.datetime), selectedDay)
+          prospects={prospects.filter((prospect) =>
+            isSameDay(new Date(prospect.datetime), selectedDay)
           )}
           onClose={() => setSelectedDay(null)}
-          onEdit={onUpdateBooking}
-          onDelete={onDeleteBooking}
+          onEdit={onUpdateProspect}
+          onDelete={onDeleteProspect}
         />
       )}
     </div>

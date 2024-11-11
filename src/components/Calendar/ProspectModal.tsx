@@ -1,16 +1,16 @@
 import React from 'react';
 import { X, Calendar, Clock, MapPin, Phone, User, Flag, AlertTriangle, MessageCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import { Booking, Reminder } from '../../types/calendar';
+import { Prospect, Reminder } from '../../types/calendar';
 import { ServiceTypeSelector } from './ServiceTypeSelector';
-import { AddBookingModal } from './AddProspectModal';
+import { AddProspectModal } from './AddProspectModal';
 import { RemindersAccordion } from './RemindersAccordion';
 
-interface BookingModalProps {
-  booking: Booking;
+interface ProspectModalProps {
+  prospect: Prospect;
   onClose: () => void;
-  onEdit: (booking: Booking) => Promise<void>;
-  onDelete: (bookingId: string) => Promise<void>;
+  onEdit: (prospect: Prospect) => Promise<void>;
+  onDelete: (prospectId: string) => Promise<void>;
   onUpdateReminder: (prospectId: string, reminderId: string, completed: boolean) => Promise<void>;
 }
 
@@ -27,29 +27,29 @@ const priorityColors = {
   high: 'bg-red-50 text-red-800'
 };
 
-export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateReminder }: BookingModalProps) {
+export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateReminder }: ProspectModalProps) {
   const [showEditModal, setShowEditModal] = React.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
-  const [currentBooking, setCurrentBooking] = React.useState(booking);
-  const [reminders, setReminders] = React.useState<Reminder[]>(booking.reminders || []);
+  const [currentProspect, setCurrentProspect] = React.useState(prospect);
+  const [reminders, setReminders] = React.useState<Reminder[]>(prospect.reminders || []);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [showPhoneMenu, setShowPhoneMenu] = React.useState(false);
   const phoneMenuRef = React.useRef<HTMLDivElement>(null);
-  const [localServices, setLocalServices] = React.useState(booking.services);
+  const [localServices, setLocalServices] = React.useState(prospect.services);
 
-  const handleEdit = async (updatedBooking: Omit<Booking, 'id'>) => {
+  const handleEdit = async (updatedProspect: Omit<Prospect, 'id'>) => {
     try {
       setIsLoading(true);
-      const fullBooking = { 
-        ...updatedBooking, 
-        id: currentBooking.id,
+      const fullProspect = { 
+        ...updatedProspect, 
+        id: currentProspect.id,
       };
-      await onEdit(fullBooking as Booking);
+      await onEdit(fullProspect as Prospect);
       
-      // Update the current booking state with the new data
-      setCurrentBooking(fullBooking as Booking);
-      setReminders(fullBooking.reminders);
+      // Update the current prospect state with the new data
+      setCurrentProspect(fullProspect as Prospect);
+      setReminders(fullProspect.reminders);
       setShowEditModal(false);
     } catch {
       setError('Failed to update prospect');
@@ -60,10 +60,10 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
 
   // Keep local state in sync with prop updates
   React.useEffect(() => {
-    setCurrentBooking(booking);
-    setReminders(booking.reminders || []);
-    setLocalServices(booking.services);
-  }, [booking]);
+    setCurrentProspect(prospect);
+    setReminders(prospect.reminders || []);
+    setLocalServices(prospect.services);
+  }, [prospect]);
 
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -79,7 +79,7 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
   const handleDelete = async () => {
     try {
       setIsLoading(true);
-      await onDelete(booking.id);
+      await onDelete(prospect.id);
       setShowDeleteConfirm(false);
       onClose();
     } catch (err: unknown) {
@@ -95,11 +95,11 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
     try {
       setIsLoading(true);
       await onEdit({
-        ...booking,
+        ...prospect,
         reminders: updatedReminders
       });
     } catch (err: unknown) {
-      setReminders(booking.reminders || []);
+      setReminders(prospect.reminders || []);
       console.error('Failed to update reminders:', err);
       setError(`Failed to update reminders: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
@@ -108,31 +108,31 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
   };
 
   const handleCall = () => {
-    window.location.href = `tel:${booking.phone}`;
+    window.location.href = `tel:${prospect.phone}`;
     setShowPhoneMenu(false);
   };
 
   const handleWhatsApp = () => {
     // Add Cameroon country code (+237) if not present
-    const phoneNumber = booking.phone.startsWith('+237') 
-      ? booking.phone.replace(/\s/g, '') 
-      : '+237' + booking.phone.replace(/\s/g, '');
+    const phoneNumber = prospect.phone.startsWith('+237') 
+      ? prospect.phone.replace(/\s/g, '') 
+      : '+237' + prospect.phone.replace(/\s/g, '');
     window.open(`https://wa.me/${phoneNumber}`, '_blank');
     setShowPhoneMenu(false);
   };
 
   const handleRefresh = async () => {
     try {
-      await onEdit(booking);
+      await onEdit(prospect);
     } catch (error) {
-      console.error('Failed to refresh booking:', error);
+      console.error('Failed to refresh prospect:', error);
     }
   };
 
   const handleServiceToggle = async (service: ServiceInstance) => {
     try {
       // Optimistically update local state
-      const updatedServices = currentBooking.services.some(s => s.id === service.id)
+      const updatedServices = currentProspect.services.some(s => s.id === service.id)
         ? localServices.filter(s => s.id !== service.id) // Remove service
         : [...localServices, {  // Add service
             id: service.id,
@@ -143,16 +143,16 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
       setLocalServices(updatedServices);
 
       // Update in background
-      const updatedBooking = {
-        ...currentBooking,
+      const updatedProspect = {
+        ...currentProspect,
         services: updatedServices
       };
 
-      await onEdit(updatedBooking);
-      setCurrentBooking(updatedBooking);
+      await onEdit(updatedProspect);
+      setCurrentProspect(updatedProspect);
     } catch (error) {
       // Revert on error
-      setLocalServices(currentBooking.services);
+      setLocalServices(currentProspect.services);
       setError('Failed to update services');
       console.error('Failed to update services:', error);
     }
@@ -171,16 +171,16 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
       setLocalServices(updatedServices);
 
       // Update in background
-      const updatedBooking = {
-        ...currentBooking,
+      const updatedProspect = {
+        ...currentProspect,
         services: updatedServices
       };
 
-      await onEdit(updatedBooking);
-      setCurrentBooking(updatedBooking);
+      await onEdit(updatedProspect);
+      setCurrentProspect(updatedProspect);
     } catch (error) {
       // Revert on error
-      setLocalServices(currentBooking.services);
+      setLocalServices(currentProspect.services);
       setError('Failed to update service details');
       console.error('Failed to update service details:', error);
     }
@@ -212,10 +212,10 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
             <h2 className="text-xl font-bold text-gray-900">
               Prospect Details
             </h2>
-            {currentBooking.name && (
+            {currentProspect.name && (
               <div className="flex items-center gap-2 text-gray-600">
                 <User className="w-4 h-4" />
-                <span>{currentBooking.name}</span>
+                <span>{currentProspect.name}</span>
               </div>
             )}
           </div>
@@ -256,16 +256,16 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
 
             {/* Status and Priority */}
             <div className="flex flex-wrap gap-2">
-              <span className={`px-2.5 py-1 rounded-full text-sm ${statusColors[currentBooking.status]}`}>
-                {currentBooking.status.charAt(0).toUpperCase() + currentBooking.status.slice(1)}
+              <span className={`px-2.5 py-1 rounded-full text-sm ${statusColors[currentProspect.status]}`}>
+                {currentProspect.status.charAt(0).toUpperCase() + currentProspect.status.slice(1)}
               </span>
-              <span className={`px-2.5 py-1 rounded-full text-sm ${priorityColors[currentBooking.priority]}`}>
+              <span className={`px-2.5 py-1 rounded-full text-sm ${priorityColors[currentProspect.priority]}`}>
                 <div className="flex items-center gap-1">
                   <Flag className="w-3 h-3" />
-                  {currentBooking.priority.charAt(0).toUpperCase() + currentBooking.priority.slice(1)} Priority
+                  {currentProspect.priority.charAt(0).toUpperCase() + currentProspect.priority.slice(1)} Priority
                 </div>
               </span>
-              {currentBooking.isAllDay && (
+              {currentProspect.isAllDay && (
                 <span className="px-2.5 py-1 rounded-full text-sm bg-purple-50 text-purple-800">
                   All day
                 </span>
@@ -273,14 +273,14 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
             </div>
 
             {/* Date and Time */}
-            {currentBooking.datetime && (
+            {currentProspect.datetime && (
               <div className="flex items-center gap-2 text-gray-600">
                 <Calendar className="w-4 h-4" />
-                <span>{format(new Date(currentBooking.datetime), 'EEEE, MMMM d, yyyy')}</span>
-                {!currentBooking.isAllDay && currentBooking.datetime && (
+                <span>{format(new Date(currentProspect.datetime), 'EEEE, MMMM d, yyyy')}</span>
+                {!currentProspect.isAllDay && currentProspect.datetime && (
                   <>
                     <Clock className="w-4 h-4 ml-2" />
-                    <span>{format(new Date(currentBooking.datetime), 'HH:mm')}</span>
+                    <span>{format(new Date(currentProspect.datetime), 'HH:mm')}</span>
                   </>
                 )}
               </div>
@@ -294,7 +294,7 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
                   className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
                 >
                   <Phone className="w-4 h-4 group-hover:text-blue-500" />
-                  <span className="group-hover:text-blue-500">{currentBooking.phone}</span>
+                  <span className="group-hover:text-blue-500">{currentProspect.phone}</span>
                 </button>
 
                 {showPhoneMenu && (
@@ -320,21 +320,21 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
                 )}
               </div>
 
-              {(currentBooking.location || currentBooking.address) && (
+              {(currentProspect.location || currentProspect.address) && (
                 <div className="flex items-start gap-2 text-gray-600">
                   <MapPin className="w-4 h-4 mt-1" />
                   <div>
-                    {currentBooking.location && <div>{currentBooking.location}</div>}
-                    {currentBooking.address && <div className="text-sm">{currentBooking.address}</div>}
+                    {currentProspect.location && <div>{currentProspect.location}</div>}
+                    {currentProspect.address && <div className="text-sm">{currentProspect.address}</div>}
                   </div>
                 </div>
               )}
             </div>
 
             {/* Notes */}
-            {currentBooking.notes && (
+            {currentProspect.notes && (
               <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{currentBooking.notes}</p>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{currentProspect.notes}</p>
               </div>
             )}
           </div>
@@ -397,12 +397,12 @@ export function BookingModal({ booking, onClose, onEdit, onDelete, onUpdateRemin
       </div>
 
       {showEditModal && (
-        <AddBookingModal
-          initialBooking={{
-            ...currentBooking,
+        <AddProspectModal
+          initialProspect={{
+            ...currentProspect,
             reminders: reminders
           }}
-          initialType={currentBooking.datetime ? 'booking' : 'follow-up'}
+          initialType={currentProspect.datetime ? 'prospect' : 'follow-up'}
           onClose={() => setShowEditModal(false)}
           onAdd={handleEdit}
           hideServices={true}

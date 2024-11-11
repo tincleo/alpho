@@ -1,4 +1,4 @@
-import { Booking } from '../types/calendar';
+import { Prospect } from '../types/calendar';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client (you should have these values in your env)
@@ -16,23 +16,23 @@ function generateUUID() {
   });
 }
 
-export async function updateBooking(booking: Booking): Promise<Booking[]> {
+export async function updateProspect(prospect: Prospect): Promise<Prospect[]> {
   try {
     // First update the prospect
     const { error: prospectError } = await supabase
       .from('prospects')
       .update({
-        name: booking.name,
-        phone: booking.phone,
-        datetime: booking.datetime,
-        location: booking.location,
-        address: booking.address,
-        notes: booking.notes,
-        status: booking.status,
-        priority: booking.priority,
-        is_all_day: booking.isAllDay,
+        name: prospect.name,
+        phone: prospect.phone,
+        datetime: prospect.datetime,
+        location: prospect.location,
+        address: prospect.address,
+        notes: prospect.notes,
+        status: prospect.status,
+        priority: prospect.priority,
+        is_all_day: prospect.isAllDay,
       })
-      .eq('id', booking.id);
+      .eq('id', prospect.id);
 
     if (prospectError) throw prospectError;
 
@@ -41,12 +41,12 @@ export async function updateBooking(booking: Booking): Promise<Booking[]> {
     const { data: existingReminders, error: remindersError } = await supabase
       .from('reminders')
       .select('*')
-      .eq('prospect_id', booking.id);
+      .eq('prospect_id', prospect.id);
 
     if (remindersError) throw remindersError;
 
     // Delete reminders that are no longer present
-    const reminderIdsToKeep = booking.reminders
+    const reminderIdsToKeep = prospect.reminders
       .filter(r => !r.id.includes('temp_'))
       .map(r => r.id);
     const remindersToDelete = existingReminders
@@ -63,14 +63,14 @@ export async function updateBooking(booking: Booking): Promise<Booking[]> {
     }
 
     // Handle new and existing reminders
-    const reminderPromises = booking.reminders.map(reminder => {
+    const reminderPromises = prospect.reminders.map(reminder => {
       if (reminder.id.includes('temp_')) {
         // This is a new reminder, insert it with a proper UUID
         return supabase
           .from('reminders')
           .insert({
             id: generateUUID(), // Generate a proper UUID
-            prospect_id: booking.id,
+            prospect_id: prospect.id,
             datetime: reminder.datetime,
             note: reminder.note || '',
             completed: reminder.completed
@@ -104,14 +104,14 @@ export async function updateBooking(booking: Booking): Promise<Booking[]> {
         reminders (*),
         services (*)
       `)
-      .eq('id', booking.id)
+      .eq('id', prospect.id)
       .single();
 
     if (finalError) throw finalError;
 
     return [finalProspect];
   } catch (error: unknown) {
-    console.error('Error in updateBooking:', error);
-    throw new Error(error instanceof Error ? error.message : 'Failed to update booking');
+    console.error('Error in updateProspect:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to update prospect');
   }
 } 

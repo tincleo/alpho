@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Reminder } from '../types/calendar';
 
 interface UseRemindersProps {
-  bookingId: string;
+  prospectId: string;
   initialReminders: Reminder[];
   onComplete: (reminderId: string, completed: boolean) => Promise<void>;
 }
 
 export function useReminders({ 
-  bookingId, 
+  prospectId, 
   initialReminders, 
   onComplete 
 }: UseRemindersProps) {

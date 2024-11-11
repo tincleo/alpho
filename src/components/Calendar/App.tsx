@@ -1,48 +1,51 @@
 import React, { useState, useCallback } from 'react';
-import { Booking } from '../../types/calendar';
-import { fetchBookings, updateBooking, deleteBooking, updateReminder } from '../../lib/api';
+import { Prospect } from '../../types/calendar';
+import { fetchProspects, updateProspect, deleteProspect, updateReminder } from '../../lib/api';
 import { AgendaView } from './AgendaView';
+import { ProspectModal } from './ProspectModal';
+import { DayProspectsModal } from './DayProspectsModal';
 
 export default function App() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [prospects, setProspects] = useState<Prospect[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
 
-  const loadBookings = useCallback(async () => {
+  const loadProspects = useCallback(async () => {
     try {
-      const updatedBookings = await fetchBookings();
-      setBookings(updatedBookings);
+      const updatedProspects = await fetchProspects();
+      setProspects(updatedProspects);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load bookings');
+      setError(err instanceof Error ? err.message : 'Failed to load prospects');
     }
   }, []);
 
-  // Load bookings on mount
+  // Load prospects on mount
   React.useEffect(() => {
-    loadBookings();
-  }, [loadBookings]);
+    loadProspects();
+  }, [loadProspects]);
 
-  const handleUpdateBooking = async (updatedBooking: Booking) => {
+  const handleUpdateProspect = async (updatedProspect: Prospect) => {
     try {
       setIsSaving(true);
-      await updateBooking(updatedBooking);
-      await loadBookings();
+      await updateProspect(updatedProspect);
+      await loadProspects();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update booking');
-      console.error('Error updating booking:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update prospect');
+      console.error('Error updating prospect:', err);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDeleteBooking = async (bookingId: string) => {
+  const handleDeleteProspect = async (prospectId: string) => {
     try {
       setIsSaving(true);
-      await deleteBooking(bookingId);
-      await loadBookings();
+      await deleteProspect(prospectId);
+      await loadProspects();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete booking');
-      console.error('Error deleting booking:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete prospect');
+      console.error('Error deleting prospect:', err);
     } finally {
       setIsSaving(false);
     }
@@ -52,7 +55,7 @@ export default function App() {
     try {
       setIsSaving(true);
       await updateReminder(prospectId, reminderId, completed);
-      await loadBookings();
+      await loadProspects();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update reminder');
       console.error('Error updating reminder:', err);
@@ -64,10 +67,10 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-100 flex">
       <AgendaView
-        bookings={bookings}
-        onUpdateBooking={handleUpdateBooking}
-        onDeleteBooking={handleDeleteBooking}
-        onBookingsChange={loadBookings}
+        prospects={prospects}
+        onUpdateProspect={handleUpdateProspect}
+        onDeleteProspect={handleDeleteProspect}
+        onProspectsChange={loadProspects}
         onUpdateReminder={handleUpdateReminder}
       />
 

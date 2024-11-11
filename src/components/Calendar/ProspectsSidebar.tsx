@@ -1,13 +1,13 @@
 import React from 'react';
 import { X, Search, Check } from 'lucide-react';
-import { Booking, Priority } from '../../types/calendar';
-import { BookingPreview } from './ProspectPreview';
-import { BookingModal } from './ProspectModal';
+import { Prospect, Priority } from '../../types/calendar';
+import { ProspectPreview } from './ProspectPreview';
+import { ProspectModal } from './ProspectModal';
 
 interface ProspectsSidebarProps {
-  bookings: Booking[];
-  onUpdateBooking: (booking: Booking) => void;
-  onDeleteBooking: (bookingId: string) => void;
+  prospects: Prospect[];
+  onUpdateProspect: (prospect: Prospect) => void;
+  onDeleteProspect: (prospectId: string) => void;
   isExpanded: boolean;
   onToggle: () => void;
 }
@@ -16,35 +16,35 @@ const STATUS_OPTIONS = ['pending', 'confirmed', 'completed', 'cancelled'] as con
 const PRIORITY_OPTIONS: Priority[] = ['low', 'medium', 'high'];
 
 export function ProspectsSidebar({ 
-  bookings, 
-  onUpdateBooking, 
-  onDeleteBooking,
+  prospects, 
+  onUpdateProspect, 
+  onDeleteProspect,
   isExpanded,
   onToggle
 }: ProspectsSidebarProps) {
-  const [selectedBooking, setSelectedBooking] = React.useState<Booking | null>(null);
+  const [selectedProspect, setSelectedProspect] = React.useState<Prospect | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedStatuses, setSelectedStatuses] = React.useState<typeof STATUS_OPTIONS[number][]>([...STATUS_OPTIONS]);
   const [selectedPriorities, setSelectedPriorities] = React.useState<Priority[]>([...PRIORITY_OPTIONS]);
   const [showStatusDropdown, setShowStatusDropdown] = React.useState(false);
   const [showPriorityDropdown, setShowPriorityDropdown] = React.useState(false);
 
-  const filteredBookings = React.useMemo(() => {
+  const filteredProspects = React.useMemo(() => {
     const query = searchQuery.toLowerCase();
-    return bookings.filter(booking => {
+    return prospects.filter(prospect => {
       const matchesSearch = 
-        booking.services.some(service => service.type.toLowerCase().includes(query)) ||
-        booking.location.toLowerCase().includes(query) ||
-        (booking.address?.toLowerCase().includes(query) || false) ||
-        booking.phone.includes(query) ||
-        (booking.name?.toLowerCase().includes(query) || false);
+        prospect.services.some(service => service.type.toLowerCase().includes(query)) ||
+        prospect.location.toLowerCase().includes(query) ||
+        (prospect.address?.toLowerCase().includes(query) || false) ||
+        prospect.phone.includes(query) ||
+        (prospect.name?.toLowerCase().includes(query) || false);
 
-      const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(booking.status);
-      const matchesPriority = selectedPriorities.length === 0 || selectedPriorities.includes(booking.priority);
+      const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(prospect.status);
+      const matchesPriority = selectedPriorities.length === 0 || selectedPriorities.includes(prospect.priority);
 
       return matchesSearch && matchesStatus && matchesPriority;
     });
-  }, [bookings, searchQuery, selectedStatuses, selectedPriorities]);
+  }, [prospects, searchQuery, selectedStatuses, selectedPriorities]);
 
   const handleClickOutside = React.useCallback((event: MouseEvent) => {
     const target = event.target as HTMLElement;
@@ -76,7 +76,7 @@ export function ProspectsSidebar({
         <div className="h-full flex flex-col">
           <div className="sticky top-0 z-20 p-4 border-b border-gray-200 flex items-center justify-between bg-white">
             <h2 className="text-lg font-semibold text-gray-900">
-              Prospects <span className="text-sm text-gray-500">({bookings.length})</span>
+              Prospects <span className="text-sm text-gray-500">({prospects.length})</span>
             </h2>
             <button
               onClick={onToggle}
@@ -191,20 +191,20 @@ export function ProspectsSidebar({
 
           <div className="flex-1 overflow-y-auto p-4">
             <div className="space-y-2">
-              {filteredBookings.length === 0 ? (
+              {filteredProspects.length === 0 ? (
                 <p className="text-sm text-gray-500 text-center py-4">
                   No prospects found
                 </p>
               ) : (
-                filteredBookings.map((booking) => (
+                filteredProspects.map((prospect) => (
                   <div 
-                    key={booking.id} 
-                    onClick={() => setSelectedBooking(booking)}
+                    key={prospect.id} 
+                    onClick={() => setSelectedProspect(prospect)}
                     className="transition-all duration-200 hover:bg-gray-50 hover:border-blue-200 rounded-lg cursor-pointer border border-transparent"
                   >
-                    <BookingPreview
-                      booking={booking}
-                      onClick={() => setSelectedBooking(booking)}
+                    <ProspectPreview
+                      prospect={prospect}
+                      onClick={() => setSelectedProspect(prospect)}
                       view="agenda"
                       draggable={false}
                     />
@@ -216,12 +216,12 @@ export function ProspectsSidebar({
         </div>
       </div>
 
-      {selectedBooking && (
-        <BookingModal
-          booking={selectedBooking}
-          onClose={() => setSelectedBooking(null)}
-          onEdit={onUpdateBooking}
-          onDelete={onDeleteBooking}
+      {selectedProspect && (
+        <ProspectModal
+          prospect={selectedProspect}
+          onClose={() => setSelectedProspect(null)}
+          onEdit={onUpdateProspect}
+          onDelete={onDeleteProspect}
         />
       )}
     </>

@@ -23,7 +23,7 @@ export interface Reminder {
   completed: boolean;
 }
 
-export interface Booking {
+export interface Prospect {
   id: string;
   name: string;
   phone: string;
@@ -36,4 +36,14 @@ export interface Booking {
   isAllDay: boolean;
   services: Service[];
   reminders: Reminder[];
+}
+
+interface ProspectModalProps {
+  prospect: Prospect;
+  // ...
+}
+
+interface DayProspectsModalProps {
+  prospects: Prospect[];
+  // ...
 }

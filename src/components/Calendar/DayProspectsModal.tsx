@@ -1,20 +1,20 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { Booking } from '../../types/calendar';
+import { Prospect } from '../../types/calendar';
 import { format } from 'date-fns';
-import { BookingPreview } from './ProspectPreview';
-import { BookingModal } from './ProspectModal';
+import { ProspectPreview } from './ProspectPreview';
+import { ProspectModal } from './ProspectModal';
 
-interface DayBookingsModalProps {
+interface DayProspectsModalProps {
   date: Date;
-  bookings: Booking[];
+  prospects: Prospect[];
   onClose: () => void;
-  onEdit?: (booking: Booking) => void;
-  onDelete?: (bookingId: string) => void;
+  onEdit?: (prospect: Prospect) => void;
+  onDelete?: (prospectId: string) => void;
 }
 
-export function DayBookingsModal({ date, bookings, onClose, onEdit, onDelete }: DayBookingsModalProps) {
-  const [selectedBooking, setSelectedBooking] = React.useState<Booking | null>(
+export function DayProspectsModal({ date, prospects, onClose, onEdit, onDelete }: DayProspectsModalProps) {
+  const [selectedProspect, setSelectedProspect] = React.useState<Prospect | null>(
     null
   );
 
@@ -35,16 +35,16 @@ export function DayBookingsModal({ date, bookings, onClose, onEdit, onDelete }: 
           </div>
 
           <div className="space-y-2">
-            {bookings.length === 0 ? (
+            {prospects.length === 0 ? (
               <p className="text-gray-500 text-center py-4">
-                No bookings for this day
+                No prospects for this day
               </p>
             ) : (
-              bookings.map((booking) => (
-                <BookingPreview
-                  key={booking.id}
-                  booking={booking}
-                  onClick={() => setSelectedBooking(booking)}
+              prospects.map((prospect) => (
+                <ProspectPreview
+                  key={prospect.id}
+                  prospect={prospect}
+                  onClick={() => setSelectedProspect(prospect)}
                   view="agenda"
                 />
               ))
@@ -53,10 +53,10 @@ export function DayBookingsModal({ date, bookings, onClose, onEdit, onDelete }: 
         </div>
       </div>
 
-      {selectedBooking && (
-        <BookingModal
-          booking={selectedBooking}
-          onClose={() => setSelectedBooking(null)}
+      {selectedProspect && (
+        <ProspectModal
+          prospect={selectedProspect}
+          onClose={() => setSelectedProspect(null)}
           onEdit={onEdit}
           onDelete={onDelete}
         />

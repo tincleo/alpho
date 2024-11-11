@@ -1,6 +1,6 @@
 import React from 'react';
 import { Brush, Search, Menu, X } from 'lucide-react';
-import { ServiceType, Location, Booking } from '../../types/calendar';
+import { ServiceType, Location, Prospect } from '../../types/calendar';
 
 interface SidebarProps {
   selectedServices: ServiceType[];
@@ -8,7 +8,7 @@ interface SidebarProps {
   selectedStatuses: string[];
   onStatusChange: (statuses: string[]) => void;
   onLocationChange?: (locations: Location[]) => void;
-  bookings?: Booking[];
+  prospects?: Prospect[];
 }
 
 const SERVICE_TYPES: Record<ServiceType, string> = {
@@ -39,7 +39,7 @@ const LOCATIONS: Location[] = [
   'Omnisport', 'Tsinga', 'Etoa-Meki', 'Nlongkak'
 ];
 
-export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, onStatusChange, onLocationChange, bookings = [] }: SidebarProps) {
+export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, onStatusChange, onLocationChange, prospects = [] }: SidebarProps) {
   const [selectedLocations, setSelectedLocations] = React.useState<Location[]>(LOCATIONS);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isLocationsOpen, setIsLocationsOpen] = React.useState(false);
@@ -63,17 +63,17 @@ export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, o
   }, []);
 
   const getServiceCount = (service: ServiceType) => {
-    return bookings.filter(booking => 
-      booking.services.some(s => s.type === service)
+    return prospects.filter(prospect => 
+      prospect.services.some(s => s.type === service)
     ).length;
   };
 
   const getStatusCount = (status: string) => {
-    return bookings.filter(booking => booking.status === status).length;
+    return prospects.filter(prospect => prospect.status === status).length;
   };
 
   const getLocationCount = (location: Location) => {
-    return bookings.filter(booking => booking.location === location).length;
+    return prospects.filter(prospect => prospect.location === location).length;
   };
 
   const toggleService = (service: ServiceType) => {

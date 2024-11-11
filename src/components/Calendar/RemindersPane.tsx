@@ -1,14 +1,14 @@
 import React from 'react';
 import { X, Bell, Flag, Check } from 'lucide-react';
-import { Booking } from '../../types/calendar';
+import { Prospect } from '../../types/calendar';
 import { format, startOfDay, differenceInDays } from 'date-fns';
 
 interface RemindersPaneProps {
   isOpen: boolean;
   onClose: () => void;
-  bookings: Booking[];
-  onBookingClick: (booking: Booking) => void;
-  onUpdateReminder: (bookingId: string, reminderId: string, completed: boolean) => void;
+  prospects: Prospect[];
+  onProspectClick: (prospect: Prospect) => void;
+  onUpdateReminder: (prospectId: string, reminderId: string, completed: boolean) => void;
 }
 
 const SERVICE_TYPES: Record<string, string> = {
@@ -24,14 +24,14 @@ const priorityColors = {
   high: 'bg-red-50 text-red-800'
 };
 
-type ReminderWithBooking = {
+type ReminderWithProspect = {
   id: string;
   datetime: string;
   completed?: boolean;
-  booking: Booking;
+  prospect: Prospect;
 };
 
-export function RemindersPane({ isOpen, onClose, bookings, onBookingClick, onUpdateReminder }: RemindersPaneProps) {
+export function RemindersPane({ isOpen, onClose, prospects, onProspectClick, onUpdateReminder }: RemindersPaneProps) {
   const [activeTab, setActiveTab] = React.useState<'open' | 'completed'>('open');
 
   // Reset to 'open' tab whenever the pane is opened
@@ -41,19 +41,19 @@ export function RemindersPane({ isOpen, onClose, bookings, onBookingClick, onUpd
     }
   }, [isOpen]);
 
-  // Get all reminders from all bookings and sort them
+  // Get all reminders from all prospects and sort them
   const allReminders = React.useMemo(() => {
-    const reminders = bookings.flatMap(booking => 
-      (booking.reminders || []).map(reminder => ({
+    const reminders = prospects.flatMap(prospect => 
+      (prospect.reminders || []).map(reminder => ({
         ...reminder,
-        booking
+        prospect
       }))
     );
 
     return reminders.sort((a, b) => 
       new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
     );
-  }, [bookings]);
+  }, [prospects]);
 
   const openReminders = allReminders.filter(r => !r.completed);
   const completedRemindersList = allReminders.filter(r => r.completed);
@@ -73,9 +73,9 @@ export function RemindersPane({ isOpen, onClose, bookings, onBookingClick, onUpd
     return `${format(date, "EEEE, dd MMMM")} (${daysText})`;
   };
 
-  const handleReminderComplete = async (reminder: ReminderWithBooking) => {
+  const handleReminderComplete = async (reminder: ReminderWithProspect) => {
     try {
-      await onUpdateReminder(reminder.booking.id, reminder.id, !reminder.completed);
+      await onUpdateReminder(reminder.prospect.id, reminder.id, !reminder.completed);
     } catch (error) {
       console.error('Failed to update reminder:', error);
     }
@@ -132,7 +132,7 @@ export function RemindersPane({ isOpen, onClose, bookings, onBookingClick, onUpd
               {displayReminders.map((reminder) => (
                 <div
                   key={reminder.id}
-                  onClick={() => onBookingClick(reminder.booking)}
+                  onClick={() => onProspectClick(reminder.prospect)}
                   className="w-full text-left group cursor-pointer hover:bg-gray-50"
                 >
                   <div className="px-4 py-2.5 relative">
@@ -142,16 +142,16 @@ export function RemindersPane({ isOpen, onClose, bookings, onBookingClick, onUpd
                     
                     <div className="flex items-center gap-1.5 text-xs text-gray-600">
                       <span className="font-medium">
-                        {reminder.booking.services.map(s => SERVICE_TYPES[s.type]).join(', ')}
+                        {reminder.prospect.services.map(s => SERVICE_TYPES[s.type]).join(', ')}
                       </span>
                       <span>•</span>
-                      <span>{reminder.booking.location}</span>
+                      <span>{reminder.prospect.location}</span>
                       <span>•</span>
                       <span className={`px-1.5 py-0.5 rounded-full flex items-center gap-1 ${
-                        priorityColors[reminder.booking.priority]
+                        priorityColors[reminder.prospect.priority]
                       }`}>
                         <Flag className="w-2.5 h-2.5" />
-                        {reminder.booking.priority.charAt(0).toUpperCase() + reminder.booking.priority.slice(1)}
+                        {reminder.prospect.priority.charAt(0).toUpperCase() + reminder.prospect.priority.slice(1)}
                       </span>
                     </div>
 

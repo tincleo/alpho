@@ -1,13 +1,13 @@
 import React from 'react';
 import { Clock, MapPin } from 'lucide-react';
-import { Booking } from '../../types/calendar';
+import { Prospect } from '../../types/calendar';
 import { format } from 'date-fns';
 
-interface BookingPreviewProps {
-  booking: Booking;
+interface ProspectPreviewProps {
+  prospect: Prospect;
   onClick: (e: React.MouseEvent) => void;
   draggable?: boolean;
-  onDragStart?: (booking: Booking) => void;
+  onDragStart?: (prospect: Prospect) => void;
   onDragEnd?: () => void;
   view?: 'week' | 'month' | 'agenda';
   compact?: boolean;
@@ -20,14 +20,14 @@ const SERVICE_TYPES: Record<string, string> = {
   'mattress': 'Mattress Cleaning'
 };
 
-export function BookingPreview({
-  booking,
+export function ProspectPreview({
+  prospect,
   onClick,
   draggable = true,
   onDragStart,
   onDragEnd,
   view = 'month'
-}: BookingPreviewProps) {
+}: ProspectPreviewProps) {
   const statusColors = {
     pending: 'bg-yellow-500',
     confirmed: 'bg-green-500',
@@ -45,11 +45,11 @@ export function BookingPreview({
   const handleDragStart = (e: React.DragEvent) => {
     if (!draggable) return;
     e.stopPropagation();
-    onDragStart?.(booking);
+    onDragStart?.(prospect);
   };
 
   const getServiceSummary = () => {
-    return booking.services.map(service => SERVICE_TYPES[service.type]).join(', ');
+    return prospect.services.map(service => SERVICE_TYPES[service.type]).join(', ');
   };
 
   if (view === 'week') {
@@ -60,21 +60,21 @@ export function BookingPreview({
         onDragStart={handleDragStart}
         onDragEnd={onDragEnd}
         className={`px-1.5 py-1 rounded cursor-pointer hover:shadow-sm transition-all text-xs ${
-          booking.isAllDay 
+          prospect.isAllDay 
             ? 'bg-yellow-50 border border-yellow-200 sticky top-6 z-10' 
             : 'bg-white border border-gray-200'
         }`}
       >
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-1">
-            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusColors[booking.status]}`} />
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusColors[prospect.status]}`} />
             <span className="font-medium truncate">
-              {SERVICE_TYPES[booking.services[0].type]}
-              {booking.services.length > 1 && ` +${booking.services.length - 1}`}
+              {SERVICE_TYPES[prospect.services[0].type]}
+              {prospect.services.length > 1 && ` +${prospect.services.length - 1}`}
             </span>
           </div>
           <div className="text-[10px] text-gray-500 pl-3 truncate">
-            {booking.location} • {!booking.isAllDay && format(new Date(booking.datetime), 'HH:mm')}
+            {prospect.location} • {!prospect.isAllDay && format(new Date(prospect.datetime), 'HH:mm')}
           </div>
         </div>
       </div>
@@ -89,20 +89,20 @@ export function BookingPreview({
         onDragStart={handleDragStart}
         onDragEnd={onDragEnd}
         className={`px-1.5 py-1 rounded cursor-pointer hover:shadow-sm transition-all text-xs ${
-          booking.isAllDay 
+          prospect.isAllDay 
             ? 'bg-yellow-50 border border-yellow-200 sticky top-6 z-10' 
             : 'bg-white border border-gray-200'
         }`}
       >
         <div className="flex items-center gap-1">
-          <span className={`w-1.5 h-1.5 rounded-full ${statusColors[booking.status]}`} />
+          <span className={`w-1.5 h-1.5 rounded-full ${statusColors[prospect.status]}`} />
           <span className="font-medium truncate flex-1">
-            {SERVICE_TYPES[booking.services[0].type]}
-            {booking.services.length > 1 && ` +${booking.services.length - 1}`}
+            {SERVICE_TYPES[prospect.services[0].type]}
+            {prospect.services.length > 1 && ` +${prospect.services.length - 1}`}
           </span>
-          {!booking.isAllDay && (
+          {!prospect.isAllDay && (
             <span className="text-gray-500 shrink-0">
-              {format(new Date(booking.datetime), 'HH:mm')}
+              {format(new Date(prospect.datetime), 'HH:mm')}
             </span>
           )}
         </div>
@@ -118,39 +118,39 @@ export function BookingPreview({
         onDragStart={handleDragStart}
         onDragEnd={onDragEnd}
         className={`px-2 py-2 rounded-lg border ${
-          booking.isAllDay ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-gray-100'
+          prospect.isAllDay ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-gray-100'
         }`}
       >
         <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2 min-w-0">
-                <span className={`w-1.5 h-1.5 rounded-full ${statusColors[booking.status]}`} />
+                <span className={`w-1.5 h-1.5 rounded-full ${statusColors[prospect.status]}`} />
                 <span className="font-medium text-sm text-gray-900 truncate">{getServiceSummary()}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`px-1.5 py-0.5 rounded-full text-xs ${statusBadgeColors[booking.status]}`}>
-                  {booking.status}
+                <span className={`px-1.5 py-0.5 rounded-full text-xs ${statusBadgeColors[prospect.status]}`}>
+                  {prospect.status}
                 </span>
-                {!booking.isAllDay && (
+                {!prospect.isAllDay && (
                   <span className="text-sm font-medium text-gray-900">
-                    {format(new Date(booking.datetime), 'HH:mm')}
+                    {format(new Date(prospect.datetime), 'HH:mm')}
                   </span>
                 )}
               </div>
             </div>
             <div className="grid gap-1 text-xs text-gray-600">
-              {!booking.isAllDay && booking.endTime && (
+              {!prospect.isAllDay && prospect.endTime && (
                 <div className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />
                   <span>
-                    {format(new Date(booking.datetime), 'HH:mm')} - {format(new Date(booking.endTime), 'HH:mm')}
+                    {format(new Date(prospect.datetime), 'HH:mm')} - {format(new Date(prospect.endTime), 'HH:mm')}
                   </span>
                 </div>
               )}
               <div className="flex items-center gap-1">
                 <MapPin className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate">{booking.location} - {booking.address}</span>
+                <span className="truncate">{prospect.location} - {prospect.address}</span>
               </div>
             </div>
           </div>

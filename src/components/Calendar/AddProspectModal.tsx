@@ -1,15 +1,15 @@
 import React from 'react';
 import { X, Calendar, UserCheck, ChevronDown, Plus } from 'lucide-react';
 import { format, setHours, setMinutes, parse, addHours } from 'date-fns';
-import { Booking, ServiceType, ServiceDetails, Location, Priority, Reminder } from '../../types/calendar';
+import { Prospect, ServiceType, ServiceDetails, Location, Priority, Reminder } from '../../types/calendar';
 import { ServiceTypeSelector } from './ServiceTypeSelector';
 
-interface AddBookingModalProps {
+interface AddProspectModalProps {
   onClose: () => void;
-  onAdd: (booking: Omit<Booking, 'id'>) => Promise<void>;
+  onAdd: (prospect: Omit<Prospect, 'id'>) => Promise<void>;
   selectedDate?: Date;
-  initialBooking?: Booking;
-  initialType?: 'booking' | 'follow-up';
+  initialProspect?: Prospect;
+  initialType?: 'prospect' | 'follow-up';
   hideServices?: boolean;
 }
 
@@ -42,49 +42,49 @@ const formatPhoneNumber = (value: string) => {
   return `${numbers.slice(0, 3)} ${numbers.slice(3, 5)} ${numbers.slice(5, 7)} ${numbers.slice(7)}`;
 };
 
-export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, initialType, hideServices = false }: AddBookingModalProps) {
+export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect, initialType, hideServices = false }: AddProspectModalProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [selectedServices, setSelectedServices] = React.useState<ServiceInstance[]>(
-    initialBooking?.services.map(s => ({
+    initialProspect?.services.map(s => ({
       id: s.id,
       type: s.type,
       details: s.details[s.type]
     })) ?? []
   );
   const [serviceDetails, setServiceDetails] = React.useState<Record<string, ServiceDetails[string]>>(
-    initialBooking?.services.reduce((acc, s) => ({
+    initialProspect?.services.reduce((acc, s) => ({
       ...acc,
       [s.id]: s.details[s.type]
     }), {}) ?? {}
   );
   const [formData, setFormData] = React.useState({
-    location: initialBooking?.location ?? '',
-    address: initialBooking?.address ?? '',
-    phone: initialBooking?.phone ?? '',
-    date: initialBooking?.datetime
-      ? format(new Date(initialBooking.datetime), 'yyyy-MM-dd')
+    location: initialProspect?.location ?? '',
+    address: initialProspect?.address ?? '',
+    phone: initialProspect?.phone ?? '',
+    date: initialProspect?.datetime
+      ? format(new Date(initialProspect.datetime), 'yyyy-MM-dd')
       : selectedDate 
         ? format(selectedDate, 'yyyy-MM-dd')
         : format(new Date(), 'yyyy-MM-dd'),
-    startTime: initialBooking?.datetime
-      ? format(new Date(initialBooking.datetime), 'HH:mm')
+    startTime: initialProspect?.datetime
+      ? format(new Date(initialProspect.datetime), 'HH:mm')
       : '09:00',
-    endTime: initialBooking?.endTime
-      ? format(new Date(initialBooking.endTime), 'HH:mm')
+    endTime: initialProspect?.endTime
+      ? format(new Date(initialProspect.endTime), 'HH:mm')
       : '11:00',
-    notes: initialBooking?.notes ?? '',
-    status: initialBooking?.status ?? 'pending',
-    isAllDay: initialBooking?.isAllDay ?? false,
-    priority: initialBooking?.priority ?? 'medium',
-    name: initialBooking?.name ?? '',
+    notes: initialProspect?.notes ?? '',
+    status: initialProspect?.status ?? 'pending',
+    isAllDay: initialProspect?.isAllDay ?? false,
+    priority: initialProspect?.priority ?? 'medium',
+    name: initialProspect?.name ?? '',
   });
-  const [prospectType, setProspectType] = React.useState<'booking' | 'follow-up'>(
-    initialType ?? (selectedDate ? 'booking' : 'follow-up')
+  const [prospectType, setProspectType] = React.useState<'prospect' | 'follow-up'>(
+    initialType ?? (selectedDate ? 'prospect' : 'follow-up')
   );
-  const [showNotes, setShowNotes] = React.useState(!!initialBooking?.notes);
-  const [locationSearch, setLocationSearch] = React.useState(initialBooking?.location || '');
+  const [showNotes, setShowNotes] = React.useState(!!initialProspect?.notes);
+  const [locationSearch, setLocationSearch] = React.useState(initialProspect?.location || '');
   const [showLocationDropdown, setShowLocationDropdown] = React.useState(false);
-  const [reminders] = React.useState<Reminder[]>(initialBooking?.reminders || []);
+  const [reminders] = React.useState<Reminder[]>(initialProspect?.reminders || []);
 
   const filteredLocations = React.useMemo(() => {
     return LOCATIONS.filter(location => 
@@ -146,13 +146,13 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
       return;
     }
 
-    if (prospectType === 'booking' && !formData.date) {
-      alert('Booking date is required for confirmed bookings');
+    if (prospectType === 'prospect' && !formData.date) {
+      alert('Prospect date is required for confirmed prospects');
       return;
     }
 
     if (formData.status === 'confirmed' && (!formData.startTime || !formData.endTime)) {
-      alert('Start and end time are required for confirmed bookings');
+      alert('Start and end time are required for confirmed prospects');
       return;
     }
 
@@ -177,7 +177,7 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
         location: formData.location,
         address: formData.address,
         phone: formData.phone,
-        datetime: prospectType === 'booking' ? 
+        datetime: prospectType === 'prospect' ? 
           new Date(`${formData.date}T${formData.startTime}`).toISOString() :
           new Date().toISOString(),
         notes: formData.notes,
@@ -189,8 +189,8 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
       });
       onClose();
     } catch (error) {
-      console.error('Failed to update booking:', error);
-      alert('Failed to update booking. Please try again.');
+      console.error('Failed to update prospect:', error);
+      alert('Failed to update prospect. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -210,7 +210,7 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
       <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-xl font-bold text-gray-900">
-            {initialBooking ? 'Edit Prospect' : 'New Prospect'}
+            {initialProspect ? 'Edit Prospect' : 'New Prospect'}
           </h2>
           <button
             onClick={onClose}
@@ -230,15 +230,15 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
               <div className="flex gap-4">
                 <button
                   type="button"
-                  onClick={() => setProspectType('booking')}
+                  onClick={() => setProspectType('prospect')}
                   className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-all ${
-                    prospectType === 'booking'
+                    prospectType === 'prospect'
                       ? 'bg-blue-600 text-white shadow-md'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
                   <Calendar className="w-4 h-4" />
-                  <span className="font-medium">Booking</span>
+                  <span className="font-medium">Prospect</span>
                 </button>
                 <button
                   type="button"
@@ -407,7 +407,7 @@ export function AddBookingModal({ onClose, onAdd, selectedDate, initialBooking, 
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Saving...' : initialBooking ? 'Save Changes' : 'Create Prospect'}
+            {isSubmitting ? 'Saving...' : initialProspect ? 'Save Changes' : 'Create Prospect'}
           </button>
         </div>
       </div>

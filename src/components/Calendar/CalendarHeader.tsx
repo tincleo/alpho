@@ -10,7 +10,7 @@ interface CalendarHeaderProps {
   onNext: () => void;
   onToday: () => void;
   onViewModeChange: (mode: ViewMode) => void;
-  onAddBooking: () => void;
+  onAddProspect: () => void;
   onToggleProspects: () => void;
   onOpenReminders: () => void;
   remindersCount: number;
@@ -23,7 +23,7 @@ export function CalendarHeader({
   onNext,
   onToday,
   onViewModeChange,
-  onAddBooking,
+  onAddProspect,
   onToggleProspects,
   onOpenReminders,
   remindersCount,
@@ -149,9 +149,9 @@ export function CalendarHeader({
           </button>
 
           <button
-            onClick={onAddBooking}
+            onClick={onAddProspect}
             className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
-            aria-label="Add Booking"
+            aria-label="Add Prospect"
           >
             <Plus className="w-5 h-5" />
           </button>
