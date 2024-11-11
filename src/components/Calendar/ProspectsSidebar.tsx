@@ -1,8 +1,8 @@
 import React from 'react';
 import { X, Search, Check } from 'lucide-react';
 import { Booking, Priority } from '../../types/calendar';
-import { BookingPreview } from './BookingPreview';
-import { BookingModal } from './BookingModal';
+import { BookingPreview } from './ProspectPreview';
+import { BookingModal } from './ProspectModal';
 
 interface ProspectsSidebarProps {
   bookings: Booking[];

@@ -2,8 +2,8 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { Booking } from '../../types/calendar';
 import { format } from 'date-fns';
-import { BookingPreview } from './BookingPreview';
-import { BookingModal } from './BookingModal';
+import { BookingPreview } from './ProspectPreview';
+import { BookingModal } from './ProspectModal';
 
 interface DayBookingsModalProps {
   date: Date;

@@ -3,7 +3,7 @@ import { X, Calendar, Clock, MapPin, Phone, User, Flag, AlertTriangle, MessageCi
 import { format } from 'date-fns';
 import { Booking, Reminder } from '../../types/calendar';
 import { ServiceTypeSelector } from './ServiceTypeSelector';
-import { AddBookingModal } from './AddBookingModal';
+import { AddBookingModal } from './AddProspectModal';
 import { RemindersAccordion } from './RemindersAccordion';
 
 interface BookingModalProps {

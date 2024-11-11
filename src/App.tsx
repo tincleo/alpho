@@ -3,12 +3,12 @@ import { addWeeks, addMonths, subWeeks, subMonths, startOfWeek, startOfMonth } f
 import { CalendarHeader } from './components/Calendar/CalendarHeader';
 import { CalendarGrid } from './components/Calendar/CalendarGrid';
 import { AgendaView } from './components/Calendar/AgendaView';
-import { AddBookingModal } from './components/Calendar/AddBookingModal';
+import { AddBookingModal } from './components/Calendar/AddProspectModal';
 import { Booking, ViewMode, ServiceType, Location } from './types/calendar';
 import { Sidebar } from './components/Calendar/Sidebar';
 import { ProspectsSidebar } from './components/Calendar/ProspectsSidebar';
 import { RemindersPane } from './components/Calendar/RemindersPane';
-import { BookingModal } from './components/Calendar/BookingModal';
+import { BookingModal } from './components/Calendar/ProspectModal';
 import { fetchBookings, createBooking, deleteBooking, updateReminder, updateBooking } from './lib/api';
 
 const SAMPLE_BOOKINGS: Booking[] = [

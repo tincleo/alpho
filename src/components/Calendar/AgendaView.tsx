@@ -1,8 +1,8 @@
 import React from 'react';
 import { format, isToday } from 'date-fns';
 import { Booking } from '../../types/calendar';
-import { BookingPreview } from './BookingPreview';
-import { BookingModal } from './BookingModal';
+import { BookingPreview } from './ProspectPreview';
+import { BookingModal } from './ProspectModal';
 import { updateReminder } from '../../lib/api';
 import { X } from 'lucide-react';
 

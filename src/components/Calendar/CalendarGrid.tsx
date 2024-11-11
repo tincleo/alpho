@@ -12,9 +12,9 @@ import {
   setHours,
   setMinutes,
 } from 'date-fns';
-import { BookingPreview } from './BookingPreview';
-import { BookingModal } from './BookingModal';
-import { DayBookingsModal } from './DayBookingsModal';
+import { BookingPreview } from './ProspectPreview';
+import { BookingModal } from './ProspectModal';
+import { DayBookingsModal } from './DayProspectsModal';
 import { Booking, ViewMode, CalendarCell } from '../../types/calendar';
 
 interface CalendarGridProps {
