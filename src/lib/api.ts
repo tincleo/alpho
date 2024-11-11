@@ -39,9 +39,12 @@ const rowToProspect = async (
     })),
     reminders: reminders.map(r => ({
       id: r.id,
+      prospect_id: r.prospect_id,
       datetime: r.datetime,
       note: r.note ?? undefined,
-      completed: r.completed
+      completed: r.completed,
+      created_at: r.created_at,
+      updated_at: r.updated_at
     }))
   };
 };
@@ -243,68 +246,74 @@ export async function updateProspect(prospect: Prospect) {
 
 // Helper function to handle reminders update
 async function handleRemindersUpdate(prospect: Prospect) {
-  // Get existing reminders
-  const { data: existingReminders, error: remindersError } = await supabase
-    .from('reminders')
-    .select('*')
-    .eq('prospect_id', prospect.id);
+  try {
+    // Get existing reminders
+    const { data: existingReminders, error: remindersError } = await supabase
+      .from('reminders')
+      .select('*')
+      .eq('prospect_id', prospect.id);
 
-  if (remindersError) throw remindersError;
+    if (remindersError) throw remindersError;
 
-  // Delete removed reminders
-  const reminderIdsToKeep = prospect.reminders
-    .filter(r => !r.id.includes('temp_'))
-    .map(r => r.id);
+    // Get IDs of reminders to keep (non-temporary ones)
+    const reminderIdsToKeep = prospect.reminders
+      .filter(r => !r.id.includes('temp_'))
+      .map(r => r.id);
 
-  if (existingReminders?.length) {
-    // Only attempt to delete if there are IDs to keep
-    if (reminderIdsToKeep.length > 0) {
-      const { error: deleteError } = await supabase
-        .from('reminders')
-        .delete()
-        .eq('prospect_id', prospect.id)
-        .not('id', 'in', reminderIdsToKeep);
+    // Delete reminders that are no longer needed
+    if (existingReminders?.length) {
+      if (reminderIdsToKeep.length > 0) {
+        // Delete reminders not in the keeplist
+        const { error: deleteError } = await supabase
+          .from('reminders')
+          .delete()
+          .eq('prospect_id', prospect.id)
+          .filter('id', 'not.in', `(${reminderIdsToKeep.join(',')})`);
 
-      if (deleteError) throw deleteError;
-    } else {
-      // If no IDs to keep, delete all reminders for this prospect
-      const { error: deleteError } = await supabase
-        .from('reminders')
-        .delete()
-        .eq('prospect_id', prospect.id);
+        if (deleteError) throw deleteError;
+      } else {
+        // If no reminders to keep, delete all reminders for this prospect
+        const { error: deleteError } = await supabase
+          .from('reminders')
+          .delete()
+          .eq('prospect_id', prospect.id);
 
-      if (deleteError) throw deleteError;
+        if (deleteError) throw deleteError;
+      }
     }
-  }
 
-  // Update existing and create new reminders
-  const reminderPromises = prospect.reminders.map(reminder => {
-    const reminderData = {
-      prospect_id: prospect.id,
-      datetime: reminder.datetime,
-      note: reminder.note || '',
-      completed: reminder.completed
-    };
+    // Handle updates and new reminders
+    for (const reminder of prospect.reminders) {
+      const reminderData = {
+        prospect_id: prospect.id,
+        datetime: reminder.datetime,
+        note: reminder.note || '',
+        completed: reminder.completed
+      };
 
-    if (reminder.id.includes('temp_')) {
-      return supabase
-        .from('reminders')
-        .insert({
-          ...reminderData,
-          id: generateUUID()
-        });
-    } else {
-      return supabase
-        .from('reminders')
-        .update(reminderData)
-        .eq('id', reminder.id);
+      if (reminder.id.includes('temp_')) {
+        // Insert new reminder
+        const { error: insertError } = await supabase
+          .from('reminders')
+          .insert({
+            ...reminderData,
+            id: generateUUID()
+          });
+
+        if (insertError) throw insertError;
+      } else {
+        // Update existing reminder
+        const { error: updateError } = await supabase
+          .from('reminders')
+          .update(reminderData)
+          .eq('id', reminder.id);
+
+        if (updateError) throw updateError;
+      }
     }
-  });
-
-  const reminderResults = await Promise.all(reminderPromises);
-  
-  for (const result of reminderResults) {
-    if (result.error) throw result.error;
+  } catch (error) {
+    console.error('Error handling reminders update:', error);
+    throw error;
   }
 }
 
@@ -324,7 +333,10 @@ export async function deleteProspect(prospectId: string) {
 export async function updateReminder(prospectId: string, reminderId: string, completed: boolean) {
   const { error } = await supabase
     .from('reminders')
-    .update({ completed })
+    .update({ 
+      completed,
+      updated_at: new Date().toISOString() // Add updated_at timestamp
+    })
     .eq('id', reminderId)
     .eq('prospect_id', prospectId);
 

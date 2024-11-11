@@ -18,9 +18,12 @@ export interface Service {
 
 export interface Reminder {
   id: string;
+  prospect_id: string;
   datetime: string;
   note?: string;
   completed: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Prospect {

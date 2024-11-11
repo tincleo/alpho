@@ -110,8 +110,8 @@ export function RemindersAccordion({
         r.id === reminder.id ? { ...r, completed: !r.completed } : r
       ));
 
-      // Update in database using updateReminder instead of toggleReminderComplete
-      await updateReminder(reminder.id, !reminder.completed);
+      // Update in database - need to pass the prospect_id
+      await updateReminder(reminder.prospect_id, reminder.id, !reminder.completed); // Add prospect_id
       await onRefresh();
     } catch (error) {
       // Revert local state on error
