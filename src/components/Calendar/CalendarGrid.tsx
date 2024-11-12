@@ -24,6 +24,7 @@ interface CalendarGridProps {
   onAddProspect: (date: Date) => void;
   onUpdateProspect: (prospect: Prospect) => Promise<void>;
   onDeleteProspect: (prospectId: string) => Promise<void>;
+  onUpdateReminder: (prospectId: string, reminderId: string, completed: boolean) => Promise<void>;
 }
 
 export function CalendarGrid({
@@ -33,6 +34,7 @@ export function CalendarGrid({
   onAddProspect,
   onUpdateProspect,
   onDeleteProspect,
+  onUpdateReminder,
 }: CalendarGridProps) {
   const [selectedProspect, setSelectedProspect] = React.useState<Prospect | null>(null);
   const [selectedDay, setSelectedDay] = React.useState<Date | null>(null);
@@ -107,6 +109,10 @@ export function CalendarGrid({
     setDraggedProspect(null);
   };
 
+  const handleUpdateReminder = async (prospectId: string, reminderId: string, completed: boolean) => {
+    await onUpdateReminder(prospectId, reminderId, completed);
+  };
+
   return (
     <div className="flex-1 overflow-hidden grid grid-rows-[auto_1fr]">
       <div className="grid grid-cols-7 bg-gray-50 border-b">
@@ -177,6 +183,7 @@ export function CalendarGrid({
           onClose={() => setSelectedProspect(null)}
           onEdit={onUpdateProspect}
           onDelete={onDeleteProspect}
+          onUpdateReminder={handleUpdateReminder}
         />
       )}
 

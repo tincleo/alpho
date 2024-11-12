@@ -140,11 +140,11 @@ export function ProspectPreview({
               </div>
             </div>
             <div className="grid gap-1 text-xs text-gray-600">
-              {!prospect.isAllDay && prospect.endTime && (
+              {!prospect.isAllDay && (
                 <div className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />
                   <span>
-                    {format(new Date(prospect.datetime), 'HH:mm')} - {format(new Date(prospect.endTime), 'HH:mm')}
+                    {format(new Date(prospect.datetime), 'HH:mm')}
                   </span>
                 </div>
               )}

@@ -57,8 +57,9 @@ export function DayProspectsModal({ date, prospects, onClose, onEdit, onDelete }
         <ProspectModal
           prospect={selectedProspect}
           onClose={() => setSelectedProspect(null)}
-          onEdit={onEdit}
-          onDelete={onDelete}
+          onEdit={onEdit!}
+          onDelete={onDelete!}
+          onUpdateReminder={handleUpdateReminder}
         />
       )}
     </div>

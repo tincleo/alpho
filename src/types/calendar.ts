@@ -1,4 +1,4 @@
-export type ServiceType = 'couch' | 'carpet' | 'auto-detailing' | 'mattress';
+export type ServiceType = 'couch' | 'carpet' | 'auto-detailing' | 'mattress' | 'car-seats';
 
 export interface ServiceDetails {
   [key: string]: {
@@ -41,12 +41,19 @@ export interface Prospect {
   reminders: Reminder[];
 }
 
-interface ProspectModalProps {
-  prospect: Prospect;
+export interface DayProspectsModalProps {
+  prospects: Prospect[];
   // ...
 }
 
-interface DayProspectsModalProps {
+export type ViewMode = 'week' | 'month' | 'agenda';
+export type Location = 'Bastos' | 'Mvan' | 'Nsam' | 'Mvog-Mbi' | 'Essos' | 
+  'Mimboman' | 'Nkoldongo' | 'Ekounou' | 'Emana' | 
+  'Nkolbisson' | 'Olembe' | 'Ngousso' | 'Messa' | 
+  'Omnisport' | 'Tsinga' | 'Etoa-Meki' | 'Nlongkak';
+
+export interface CalendarCell {
+  date: Date;
+  isCurrentMonth: boolean;
   prospects: Prospect[];
-  // ...
 }

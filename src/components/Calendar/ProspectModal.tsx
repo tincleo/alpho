@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Calendar, Clock, MapPin, Phone, User, Flag, AlertTriangle, MessageCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { Prospect, Reminder } from '../../types/calendar';
@@ -30,7 +30,7 @@ const priorityColors = {
 export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateReminder }: ProspectModalProps) {
   const [showEditModal, setShowEditModal] = React.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
-  const [currentProspect, setCurrentProspect] = React.useState(prospect);
+  const [currentProspect, setCurrentProspect] = useState<Prospect>(prospect);
   const [reminders, setReminders] = React.useState<Reminder[]>(prospect.reminders || []);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -186,6 +186,52 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
     }
   };
 
+  const handleAddReminder = async (newReminder: Omit<Reminder, 'id' | 'prospect_id' | 'created_at' | 'updated_at'>) => {
+    try {
+      setIsLoading(true);
+      
+      // Create a temporary reminder object with a temp ID
+      const tempReminder: Reminder = {
+        id: `temp_${Date.now()}`,
+        prospect_id: prospect.id,
+        datetime: newReminder.datetime,
+        note: newReminder.note,
+        completed: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // Update local state first (optimistic update)
+      const updatedProspect = {
+        ...currentProspect,
+        reminders: [...currentProspect.reminders, tempReminder]
+      };
+      setCurrentProspect(updatedProspect);
+
+      // Save to database
+      await onEdit(updatedProspect);
+    } catch (error) {
+      // Revert on error
+      setCurrentProspect(prospect);
+      setError('Failed to add reminder');
+      console.error('Failed to add reminder:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      setIsLoading(true);
+      await onEdit(currentProspect);
+      onClose();
+    } catch (error) {
+      console.error('Error saving prospect:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (error) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -233,12 +279,16 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
           <div className="space-y-6">
             {/* Reminders */}
             <RemindersAccordion
-              reminders={prospect.reminders}
-              prospectId={prospect.id}
+              reminders={currentProspect.reminders}
+              prospectId={currentProspect.id}
               onChange={(updatedReminders) => {
-                // Handle reminder changes
+                setCurrentProspect(prev => ({
+                  ...prev,
+                  reminders: updatedReminders
+                }));
               }}
-              onRefresh={handleRefresh}
+              onAddReminder={handleAddReminder}
+              onUpdateReminder={onUpdateReminder}
             />
 
             {/* Services - Updated styling */}

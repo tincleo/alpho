@@ -50,15 +50,14 @@ function ServiceCard({
     if (!details) return '';
 
     switch (type) {
-      case 'couch':
+      case 'couch': {
         const material = details.material?.charAt(0).toUpperCase() + details.material?.slice(1);
         return `${material}, ${details.seats} Seats`;
-      
-      case 'carpet':
-      case 'mattress':
+      }
+      case 'carpet': {
         const size = details.size?.charAt(0).toUpperCase() + details.size?.slice(1);
         return `${size}, Qty: ${details.quantity}`;
-      
+      }
       case 'auto-detailing':
         const mode = details.cleaningMode ? 
           details.cleaningMode.split('-')

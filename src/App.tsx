@@ -204,6 +204,7 @@ export default function App() {
             prospects={filteredProspects}
             onUpdateProspect={handleUpdateProspect}
             onDeleteProspect={handleDeleteProspect}
+            onUpdateReminder={handleUpdateReminder}
           />
         ) : (
           <CalendarGrid
@@ -213,6 +214,7 @@ export default function App() {
             onAddProspect={handleAddProspectClick}
             onUpdateProspect={handleUpdateProspect}
             onDeleteProspect={handleDeleteProspect}
+            onUpdateReminder={handleUpdateReminder}
           />
         )}
         {showAddModal && (
