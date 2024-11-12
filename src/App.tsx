@@ -24,7 +24,7 @@ export default function App() {
   const [prospects, setProspects] = React.useState<Prospect[]>([]);
   const [showAddModal, setShowAddModal] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>();
-  const [selectedServices, setSelectedServices] = React.useState<ServiceType[]>(['couch', 'carpet', 'car-seats', 'mattress']);
+  const [selectedServices, setSelectedServices] = React.useState<ServiceType[]>(['couch', 'carpet', 'auto-detailing', 'mattress']);
   const [selectedStatuses, setSelectedStatuses] = React.useState<Prospect['status'][]>(['pending', 'confirmed', 'completed', 'cancelled']);
   const [selectedLocations, setSelectedLocations] = React.useState<Location[]>(LOCATIONS);
   const [showProspects, setShowProspects] = React.useState(false);
@@ -95,7 +95,7 @@ export default function App() {
     const filtered = prospects.filter(prospect => {
       const hasSelectedService = prospect.services.some(service => selectedServices.includes(service.type));
       const hasSelectedStatus = selectedStatuses.includes(prospect.status);
-      const hasSelectedLocation = selectedLocations.includes(prospect.location);
+      const hasSelectedLocation = prospect.location ? selectedLocations.includes(prospect.location as Location) : false;
       return hasSelectedService && hasSelectedStatus && hasSelectedLocation;
     });
 

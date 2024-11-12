@@ -16,7 +16,7 @@ interface ProspectPreviewProps {
 const SERVICE_TYPES: Record<string, string> = {
   'couch': 'Couch Cleaning',
   'carpet': 'Carpet Cleaning',
-  'car-seats': 'Car Seats Cleaning',
+  'auto-detailing': 'Auto Detailing',
   'mattress': 'Mattress Cleaning'
 };
 

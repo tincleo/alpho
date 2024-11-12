@@ -14,9 +14,9 @@ interface ServiceDetailsPopoverProps {
 }
 
 const DEFAULT_VALUES: Record<ServiceType, ServiceDetails> = {
-  'couch': { couch: { type: undefined, seats: 7 } },
+  'couch': { couch: { material: undefined, seats: 7 } },
   'carpet': { carpet: { size: undefined, quantity: 1 } },
-  'car-seats': { 'car-seats': { seats: 5 } },
+  'auto-detailing': { 'auto-detailing': { cleaningMode: undefined } },
   'mattress': { mattress: { size: undefined, quantity: 1 } }
 };
 
@@ -96,8 +96,8 @@ export function ServiceDetailsPopover({
 
     switch (serviceType) {
       case 'couch':
-        if (!details.couch?.type) {
-          newErrors.type = 'Please select a couch type';
+        if (!details.couch?.material) {
+          newErrors.material = 'Please select a couch material';
         }
         break;
       case 'carpet':
@@ -261,24 +261,33 @@ export function ServiceDetailsPopover({
           </>
         );
 
-      case 'car-seats':
+      case 'auto-detailing':
         return (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Number of Seats
+              Cleaning Mode
             </label>
-            <input
-              type="number"
-              min="1"
-              value={details['car-seats']?.seats}
-              onChange={(e) =>
-                setDetails({
-                  ...details,
-                  'car-seats': { seats: parseInt(e.target.value) },
-                })
-              }
-              className="w-24 px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+            <div className="flex gap-2">
+              {['seats-only', 'full-interior', 'gold-cleaning'].map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() =>
+                    setDetails({
+                      ...details,
+                      'auto-detailing': { cleaningMode: mode as ServiceDetails['auto-detailing']['cleaningMode'] },
+                    })
+                  }
+                  className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                    details['auto-detailing']?.cleaningMode === mode
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  {mode.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                </button>
+              ))}
+            </div>
           </div>
         );
 
