@@ -1,6 +1,7 @@
 import React from 'react';
 import { Brush, Search, Menu, X } from 'lucide-react';
 import { ServiceType, Location, Prospect } from '../../types/calendar';
+import { fetchLocations, LocationRow } from '../../lib/api';
 
 interface SidebarProps {
   selectedServices: ServiceType[];
@@ -32,20 +33,15 @@ const STATUS_COLORS = {
   cancelled: 'bg-red-500',
 };
 
-const LOCATIONS: Location[] = [
-  'Bastos', 'Mvan', 'Nsam', 'Mvog-Mbi', 'Essos', 
-  'Mimboman', 'Nkoldongo', 'Ekounou', 'Emana', 
-  'Nkolbisson', 'Olembe', 'Ngousso', 'Messa', 
-  'Omnisport', 'Tsinga', 'Etoa-Meki', 'Nlongkak'
-];
 
 export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, onStatusChange, onLocationChange, prospects = [] }: SidebarProps) {
-  const [selectedLocations, setSelectedLocations] = React.useState<Location[]>(LOCATIONS);
+  const [selectedLocations, setSelectedLocations] = React.useState<Location[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isLocationsOpen, setIsLocationsOpen] = React.useState(false);
   const [isExpanded, setIsExpanded] = React.useState(window.innerWidth >= 768);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const [locations, setLocations] = React.useState<Location[]>([]);
 
   React.useEffect(() => {
     onLocationChange?.(selectedLocations);
@@ -57,6 +53,12 @@ export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, o
         setIsExpanded(true);
       }
     };
+
+     fetchLocations().then((data: any) => {
+       const locations = data.map((location: LocationRow) => location.name);
+       setLocations(locations);
+       setSelectedLocations(locations);
+     });
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -101,14 +103,14 @@ export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, o
   };
 
   const toggleAllLocations = () => {
-    if (selectedLocations.length === LOCATIONS.length) {
+    if (selectedLocations.length === locations.length) {
       setSelectedLocations([]);
     } else {
-      setSelectedLocations([...LOCATIONS]);
+      setSelectedLocations([...locations]);
     }
   };
 
-  const filteredLocations = LOCATIONS.filter(location =>
+  const filteredLocations = locations.filter(location =>
     location.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -239,7 +241,7 @@ export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, o
                     />
                     <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                     <div className="absolute right-3 top-2.5 text-xs text-gray-500">
-                      {selectedLocations.length}/{LOCATIONS.length}
+                      {selectedLocations.length}/{locations.length}
                     </div>
                   </div>
 
@@ -253,7 +255,7 @@ export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, o
                           onClick={toggleAllLocations}
                           className="text-sm text-blue-600 hover:text-blue-800"
                         >
-                          {selectedLocations.length === LOCATIONS.length ? 'Unselect all' : 'Select all'}
+                          {selectedLocations.length === locations.length ? 'Unselect all' : 'Select all'}
                         </button>
                       </div>
                       {filteredLocations.length === 0 ? (

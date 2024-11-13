@@ -4,7 +4,8 @@ import type { Database } from './database.types';
 
 type ProspectRow = Database['public']['Tables']['prospects']['Row'];
 type ServiceRow = Database['public']['Tables']['services']['Row'];
-type ReminderRow = Database['public']['Tables']['reminders']['Row'];
+type ReminderRow = Database["public"]["Tables"]["reminders"]["Row"];
+export type LocationRow = Database["public"]["Tables"]["locations"]["Row"];
 
 // Helper function to generate UUID
 function generateUUID() {
@@ -15,37 +16,66 @@ function generateUUID() {
   });
 }
 
+// Fetch location by ID from Supabase
+const fetchLocationById = async (
+  locationId: string
+): Promise<LocationRow | null> => {
+  const { data, error } = await supabase
+    .from("locations")
+    .select("*")
+    .eq("id", locationId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching location:", error);
+    return null;
+  }
+  return data as LocationRow;
+};
+
+export const fetchLocations = async (): Promise<LocationRow[] | null> => {
+  const { data, error } = await supabase.from("locations").select("*");
+
+  if (error) {
+    console.error("Error fetching location:", error);
+    return null;
+  }
+  return data as LocationRow[];
+};
+
 // Convert database row to Prospect type
 const rowToProspect = async (
   prospect: ProspectRow,
   services: ServiceRow[],
   reminders: ReminderRow[]
 ): Promise<Prospect> => {
+  const location = await fetchLocationById(prospect.location_id); // Fetch the location details
   return {
     id: prospect.id,
-    name: prospect.name ?? '',
+    name: prospect.name ?? "",
     phone: prospect.phone,
-    location: prospect.location ?? 'Bastos',
-    address: prospect.address ?? '',
+    location: location?.name ?? "Bastos",
+    location_id: prospect.location_id,
+    address: prospect.address ?? "",
     datetime: prospect.datetime,
     status: prospect.status,
     priority: prospect.priority,
     isAllDay: prospect.is_all_day,
-    notes: prospect.notes ?? '',
-    services: services.map(s => ({
+    notes: prospect.notes ?? "",
+    services: services.map((s) => ({
       id: s.id,
       type: s.type as ServiceType,
-      details: { [s.type]: s.details } as ServiceDetails
+      details: { [s.type]: s.details } as ServiceDetails,
     })),
-    reminders: reminders.map(r => ({
+    reminders: reminders.map((r) => ({
       id: r.id,
       prospect_id: r.prospect_id,
       datetime: r.datetime,
       note: r.note ?? undefined,
       completed: r.completed,
       created_at: r.created_at,
-      updated_at: r.updated_at
-    }))
+      updated_at: r.updated_at,
+    })),
   };
 };
 
@@ -74,6 +104,7 @@ export async function fetchProspects() {
 
     prospectsList.push(await rowToProspect(prospect, services || [], reminders || []));
   }
+console.log({ prospectsList });
 
   return prospectsList;
 }
@@ -161,20 +192,20 @@ export async function updateProspect(prospect: Prospect) {
     
     // 1. Update prospect first
     const { error: prospectError } = await supabase
-      .from('prospects')
+      .from("prospects")
       .update({
         name: prospect.name,
         phone: prospect.phone,
-        location: prospect.location ?? 'Bastos',
+        location_id: prospect?.location_id,
         address: prospect.address,
         datetime: prospect.datetime,
         status: prospect.status,
         priority: prospect.priority,
         is_all_day: prospect.isAllDay,
         notes: prospect.notes,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
-      .eq('id', prospect.id);
+      .eq("id", prospect.id);
 
     if (prospectError) throw prospectError;
 

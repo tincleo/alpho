@@ -124,7 +124,6 @@ export function RemindersAccordion({
 
       // Update in database
       await updateReminder(prospectId, reminder.id, !reminder.completed);
-      await onRefresh();
     } catch (error) {
       // Revert local state on error
       setLocalReminders(prev => prev.map(r => 

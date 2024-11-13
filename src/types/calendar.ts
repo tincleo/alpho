@@ -34,10 +34,11 @@ export interface Prospect {
   phone: string;
   datetime: string;
   location?: string;
+  location_id?: string;
   address?: string;
   notes?: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-  priority: 'low' | 'medium' | 'high';
+  status: "pending" | "confirmed" | "completed" | "cancelled";
+  priority: "low" | "medium" | "high";
   isAllDay: boolean;
   services: Service[];
   reminders: Reminder[];

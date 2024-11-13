@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Calendar, UserCheck, ChevronDown, Plus } from 'lucide-react';
 import { format, setHours, setMinutes, parse, addHours } from 'date-fns';
 import { Prospect, ServiceType, ServiceDetails, Location, Priority, Reminder } from '../../types/calendar';
 import { ServiceTypeSelector } from './ServiceTypeSelector';
+import { fetchLocationIdByName, fetchLocations, LocationRow } from '../../lib/api';
 
 interface AddProspectModalProps {
   onClose: () => void;
@@ -12,13 +13,6 @@ interface AddProspectModalProps {
   initialType?: 'prospect' | 'follow-up';
   hideServices?: boolean;
 }
-
-const LOCATIONS: Location[] = [
-  'Bastos', 'Mvan', 'Nsam', 'Mvog-Mbi', 'Essos', 
-  'Mimboman', 'Nkoldongo', 'Ekounou', 'Emana', 
-  'Nkolbisson', 'Olembe', 'Ngousso', 'Messa', 
-  'Omnisport', 'Tsinga', 'Etoa-Meki', 'Nlongkak'
-];
 
 const PRIORITIES: Priority[] = ['low', 'medium', 'high'];
 
@@ -85,9 +79,17 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
   const [locationSearch, setLocationSearch] = React.useState(initialProspect?.location || '');
   const [showLocationDropdown, setShowLocationDropdown] = React.useState(false);
   const [reminders] = React.useState<Reminder[]>(initialProspect?.reminders || []);
+  const [locations, setLocations] = React.useState<Location[]>([]);
+
+   useEffect(() => {
+    
+     fetchLocations().then((data: any) =>
+       setLocations(data.map((location: LocationRow) => location.name))
+     );
+   }, []);
 
   const filteredLocations = React.useMemo(() => {
-    return LOCATIONS.filter(location => 
+    return locations.filter((location) =>
       location.toLowerCase().includes(locationSearch.toLowerCase())
     );
   }, [locationSearch]);
@@ -172,14 +174,18 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
 
     try {
       setIsSubmitting(true);
+
+      const location = await fetchLocationIdByName(formData.location);
       await onAdd({
         services,
-        location: formData.location,
+        location_id: location?.id,
+        location: location?.name,
         address: formData.address,
         phone: formData.phone,
-        datetime: prospectType === 'prospect' ? 
-          new Date(`${formData.date}T${formData.startTime}`).toISOString() :
-          new Date().toISOString(),
+        datetime:
+          prospectType === "prospect"
+            ? new Date(`${formData.date}T${formData.startTime}`).toISOString()
+            : new Date().toISOString(),
         notes: formData.notes,
         status: formData.status,
         isAllDay: formData.isAllDay,
