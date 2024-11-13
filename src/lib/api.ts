@@ -272,9 +272,15 @@ async function handleRemindersUpdate(prospect: Prospect) {
 
     // Handle existing reminders (those without temp_ prefix)
     const existingRemindersToUpdate = prospect.reminders.filter(r => !r.id.startsWith('temp_'));
-    
+
     // Update existing reminders
     for (const reminder of existingRemindersToUpdate) {
+      // Validate datetime field before updating
+      if (!reminder.datetime) {
+        console.error(`Missing datetime for reminder ID ${reminder.id}`);
+        continue; // Skip this update if datetime is missing
+      }
+
       const { error: updateError } = await supabase
         .from('reminders')
         .update({
@@ -307,6 +313,7 @@ async function handleRemindersUpdate(prospect: Prospect) {
     throw error;
   }
 }
+
 
 // Delete a prospect and its related services
 export async function deleteProspect(prospectId: string) {

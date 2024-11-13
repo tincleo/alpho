@@ -8,22 +8,26 @@ interface RemindersAccordionProps {
   reminders: Reminder[];
   prospectId: string;
   onChange: (reminders: Reminder[]) => void;
+  onAddReminder: (reminders: Reminder[]) => void;
   onRefresh: () => Promise<void>;
 }
 
 const MAX_REMINDERS = 5;
 
-export function RemindersAccordion({ 
-  reminders, 
+export function RemindersAccordion({
+  reminders,
   prospectId,
   onChange,
-  onRefresh
+  onAddReminder,
 }: RemindersAccordionProps) {
-  const [localReminders, setLocalReminders] = React.useState<Reminder[]>(reminders);
+  const [localReminders, setLocalReminders] =
+    React.useState<Reminder[]>(reminders);
   const [isOpen, setIsOpen] = React.useState(false);
   const [showDatePicker, setShowDatePicker] = React.useState(false);
-  const [selectedDate, setSelectedDate] = React.useState(format(new Date(), "yyyy-MM-dd"));
-  const [note, setNote] = React.useState('');
+  const [selectedDate, setSelectedDate] = React.useState(
+    format(new Date(), "yyyy-MM-dd")
+  );
+  const [note, setNote] = React.useState("");
   const dateInputRef = React.useRef<HTMLInputElement>(null);
 
   // Keep local reminders in sync with prop reminders
@@ -36,16 +40,16 @@ export function RemindersAccordion({
 
   const formatReminderDate = (date: Date) => {
     const days = differenceInDays(date, today);
-    let daysText = '';
-    
+    let daysText = "";
+
     if (days === 0) {
-      daysText = 'today';
+      daysText = "today";
     } else if (days === 1) {
-      daysText = 'tomorrow';
+      daysText = "tomorrow";
     } else {
       daysText = `in ${days} days`;
     }
-    
+
     return `${format(date, "EEEE, dd MMMM")} (${daysText})`;
   };
 
@@ -58,7 +62,7 @@ export function RemindersAccordion({
 
   const openDatePicker = () => {
     if (hasReachedLimit) return;
-    
+
     setSelectedDate(format(new Date(), "yyyy-MM-dd"));
     setShowDatePicker(true);
     // Focus and open the date picker after a short delay
@@ -72,64 +76,73 @@ export function RemindersAccordion({
 
   const addReminder = () => {
     const selectedDateTime = startOfDay(new Date(selectedDate));
-    
+
     // Check if a reminder already exists for this date
-    const hasExistingReminder = localReminders.some(reminder => 
+    const hasExistingReminder = localReminders.some((reminder) =>
       isSameDay(new Date(reminder.datetime), selectedDateTime)
     );
 
     if (hasExistingReminder) {
-      alert('A reminder already exists for this date. Please choose a different date.');
+      alert(
+        "A reminder already exists for this date. Please choose a different date."
+      );
       return;
     }
-    
+
     const newReminder: Reminder = {
       id: `temp_${Math.random().toString(36).substr(2, 9)}`,
       prospect_id: prospectId,
       datetime: selectedDateTime.toISOString(),
       note: note.trim(),
-      completed: false
+      completed: false,
     };
-    
+
     // Add new reminder and sort
-    const updatedReminders = [...localReminders, newReminder].sort((a, b) => 
-      new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
+    const updatedReminders = [...localReminders, newReminder].sort(
+      (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
     );
-    
+
     onChange(updatedReminders);
+    onAddReminder(newReminder);
     setShowDatePicker(false);
-    setNote('');
+    setNote("");
   };
 
   const deleteReminder = (reminderId: string) => {
-    onChange(localReminders.filter(reminder => reminder.id !== reminderId));
+    onChange(localReminders.filter((reminder) => reminder.id !== reminderId));
   };
 
   const handleComplete = async (reminder: Reminder, e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     // Don't try to update temporary reminders in the database
-    if (reminder.id.includes('temp_')) {
-      setLocalReminders(prev => prev.map(r => 
-        r.id === reminder.id ? { ...r, completed: !r.completed } : r
-      ));
+    if (reminder.id.includes("temp_")) {
+      setLocalReminders((prev) =>
+        prev.map((r) =>
+          r.id === reminder.id ? { ...r, completed: !r.completed } : r
+        )
+      );
       return;
     }
 
     try {
       // Update local state immediately
-      setLocalReminders(prev => prev.map(r => 
-        r.id === reminder.id ? { ...r, completed: !r.completed } : r
-      ));
+      setLocalReminders((prev) =>
+        prev.map((r) =>
+          r.id === reminder.id ? { ...r, completed: !r.completed } : r
+        )
+      );
 
       // Update in database
       await updateReminder(prospectId, reminder.id, !reminder.completed);
     } catch (error) {
       // Revert local state on error
-      setLocalReminders(prev => prev.map(r => 
-        r.id === reminder.id ? { ...r, completed: reminder.completed } : r
-      ));
-      console.error('Failed to update reminder:', error);
+      setLocalReminders((prev) =>
+        prev.map((r) =>
+          r.id === reminder.id ? { ...r, completed: reminder.completed } : r
+        )
+      );
+      console.error("Failed to update reminder:", error);
     }
   };
 
@@ -137,22 +150,32 @@ export function RemindersAccordion({
     const selectedDate = startOfDay(new Date(dateStr));
     if (isBefore(selectedDate, today)) return;
 
-    const hasExistingReminder = localReminders.some(reminder => 
-      reminder.id !== reminderId && 
-      isSameDay(new Date(reminder.datetime), selectedDate)
+    const hasExistingReminder = localReminders.some(
+      (reminder) =>
+        reminder.id !== reminderId &&
+        isSameDay(new Date(reminder.datetime), selectedDate)
     );
 
     if (hasExistingReminder) {
-      alert('A reminder already exists for this date. Please choose a different date.');
+      alert(
+        "A reminder already exists for this date. Please choose a different date."
+      );
       return;
     }
 
-    const updatedReminders = localReminders.map(reminder => 
-      reminder.id === reminderId ? { 
-        ...reminder, 
-        datetime: selectedDate.toISOString(),
-      } : reminder
-    ).sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime());
+    const updatedReminders = localReminders
+      .map((reminder) =>
+        reminder.id === reminderId
+          ? {
+              ...reminder,
+              datetime: selectedDate.toISOString(),
+            }
+          : reminder
+      )
+      .sort(
+        (a, b) =>
+          new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
+      );
 
     onChange(updatedReminders);
   };
@@ -168,7 +191,9 @@ export function RemindersAccordion({
           <Bell className="w-4 h-4 text-gray-600" />
           <span className="font-medium text-gray-900">Reminders</span>
           {localReminders.length > 0 && (
-            <span className="text-sm text-gray-500">({localReminders.length})</span>
+            <span className="text-sm text-gray-500">
+              ({localReminders.length})
+            </span>
           )}
         </div>
         {isOpen ? (
@@ -192,9 +217,9 @@ export function RemindersAccordion({
                       type="button"
                       onClick={(e) => handleComplete(reminder, e)}
                       className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                        reminder.completed 
-                          ? 'bg-blue-500 border-blue-500 text-white' 
-                          : 'border-gray-300 hover:border-blue-500'
+                        reminder.completed
+                          ? "bg-blue-500 border-blue-500 text-white"
+                          : "border-gray-300 hover:border-blue-500"
                       }`}
                     >
                       {reminder.completed && <Check className="w-3 h-3" />}
@@ -204,21 +229,32 @@ export function RemindersAccordion({
                       <div className="relative">
                         <input
                           type="date"
-                          value={format(new Date(reminder.datetime), "yyyy-MM-dd")}
-                          onChange={(e) => updateReminderDateTime(reminder.id, e.target.value)}
+                          value={format(
+                            new Date(reminder.datetime),
+                            "yyyy-MM-dd"
+                          )}
+                          onChange={(e) =>
+                            updateReminderDateTime(reminder.id, e.target.value)
+                          }
                           min={format(today, "yyyy-MM-dd")}
                           className="absolute inset-0 opacity-0 cursor-pointer w-full"
                         />
-                        <span className={`block text-sm ${
-                          reminder.completed ? 'text-gray-400 line-through' : 'text-gray-900'
-                        }`}>
+                        <span
+                          className={`block text-sm ${
+                            reminder.completed
+                              ? "text-gray-400 line-through"
+                              : "text-gray-900"
+                          }`}
+                        >
                           {formatReminderDate(new Date(reminder.datetime))}
                         </span>
                       </div>
                       {reminder.note && (
-                        <span className={`block text-xs text-gray-500 mt-0.5 truncate ${
-                          reminder.completed ? 'line-through' : ''
-                        }`}>
+                        <span
+                          className={`block text-xs text-gray-500 mt-0.5 truncate ${
+                            reminder.completed ? "line-through" : ""
+                          }`}
+                        >
                           {reminder.note}
                         </span>
                       )}
@@ -239,27 +275,36 @@ export function RemindersAccordion({
               </div>
             </div>
           )}
-          
+
           <button
             type="button"
             onClick={openDatePicker}
             disabled={hasReachedLimit}
             className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
-              hasReachedLimit 
-                ? 'text-gray-400 bg-gray-50 cursor-not-allowed' 
-                : 'text-blue-600 hover:bg-blue-50'
+              hasReachedLimit
+                ? "text-gray-400 bg-gray-50 cursor-not-allowed"
+                : "text-blue-600 hover:bg-blue-50"
             }`}
-            title={hasReachedLimit ? `Maximum ${MAX_REMINDERS} reminders allowed` : undefined}
+            title={
+              hasReachedLimit
+                ? `Maximum ${MAX_REMINDERS} reminders allowed`
+                : undefined
+            }
           >
             <Plus className="w-4 h-4" />
-            {hasReachedLimit ? `Maximum ${MAX_REMINDERS} reminders reached` : 'Add reminder'}
+            {hasReachedLimit
+              ? `Maximum ${MAX_REMINDERS} reminders reached`
+              : "Add reminder"}
           </button>
         </div>
       )}
 
       {showDatePicker && !hasReachedLimit && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="fixed inset-0 bg-black bg-opacity-25" onClick={() => setShowDatePicker(false)} />
+          <div
+            className="fixed inset-0 bg-black bg-opacity-25"
+            onClick={() => setShowDatePicker(false)}
+          />
           <div className="relative min-h-screen flex items-center justify-center p-4">
             <div className="relative bg-white rounded-lg shadow-lg w-full max-w-sm">
               <div className="p-4 space-y-3">
@@ -268,7 +313,7 @@ export function RemindersAccordion({
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Select date
                     </label>
-                    <div 
+                    <div
                       className="relative"
                       onClick={() => dateInputRef.current?.showPicker()}
                     >
@@ -306,7 +351,7 @@ export function RemindersAccordion({
                     type="button"
                     onClick={() => {
                       setShowDatePicker(false);
-                      setNote('');
+                      setNote("");
                     }}
                     className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
                   >
