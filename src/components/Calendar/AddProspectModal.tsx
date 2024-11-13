@@ -199,7 +199,7 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
       onAdd(newProspect),
       {
         pending: 'Creating prospect...',
-        success: 'Prospect created successfully 👌',
+        success: 'Prospect created 👌',
         error: {
           render({data}) {
             // When the promise rejects, data will contain the error

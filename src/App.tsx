@@ -12,6 +12,7 @@ import { ProspectModal } from './components/Calendar/ProspectModal';
 import { fetchProspects, createProspect, deleteProspect, updateReminder, updateProspect } from './lib/api';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import './styles/toast.css';
 
 const LOCATIONS: Location[] = [
   'Bastos', 'Mvan', 'Nsam', 'Mvog-Mbi', 'Essos', 
@@ -275,7 +276,9 @@ export default function App() {
         pauseOnFocusLoss
         draggable
         pauseOnHover
-        theme="light"
+        theme="dark"
+        className="toast-container"
+        toastClassName="dark-toast"
       />
     </div>
   );
