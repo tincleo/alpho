@@ -33,6 +33,23 @@ const fetchLocationById = async (
   return data as LocationRow;
 };
 
+// Fetch location by ID from Supabase
+export const fetchLocationIdByName = async (
+  name: string
+): Promise<LocationRow | null> => {
+  const { data, error } = await supabase
+    .from("locations")
+    .select("*")
+    .eq("name", name)
+    .single();
+
+  if (error) {
+    console.error("Error fetching location:", error);
+    return null;
+  }
+  return data as LocationRow;
+};
+
 export const fetchLocations = async (): Promise<LocationRow[] | null> => {
   const { data, error } = await supabase.from("locations").select("*");
 
@@ -118,7 +135,7 @@ export async function createProspect(newProspect: Omit<Prospect, 'id'>) {
       .insert({
         name: newProspect.name,
         phone: newProspect.phone,
-        location: newProspect.location ?? 'Bastos',
+        location_id: newProspect.location_id,
         address: newProspect.address,
         datetime: newProspect.datetime,
         status: newProspect.status,

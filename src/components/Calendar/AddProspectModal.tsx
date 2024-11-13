@@ -3,7 +3,7 @@ import { X, Calendar, UserCheck, ChevronDown, Plus } from 'lucide-react';
 import { format, setHours, setMinutes, parse, addHours } from 'date-fns';
 import { Prospect, ServiceType, ServiceDetails, Location, Priority, Reminder } from '../../types/calendar';
 import { ServiceTypeSelector } from './ServiceTypeSelector';
-import { fetchLocations, LocationRow } from '../../lib/api';
+import { fetchLocationIdByName, fetchLocations, LocationRow } from '../../lib/api';
 
 interface AddProspectModalProps {
   onClose: () => void;
