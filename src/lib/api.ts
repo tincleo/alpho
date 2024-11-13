@@ -206,7 +206,7 @@ export async function createProspect(newProspect: Omit<Prospect, 'id'>) {
 export async function updateProspect(prospect: Prospect) {
   try {
     // Start a transaction by using multiple operations
-    
+
     // 1. Update prospect first
     const { error: prospectError } = await supabase
       .from("prospects")
@@ -225,6 +225,57 @@ export async function updateProspect(prospect: Prospect) {
       .eq("id", prospect.id);
 
     if (prospectError) throw prospectError;
+
+    // Get existing services
+    const { data: existingServices, error: getServicesError } = await supabase
+      .from("services")
+      .select("*")
+      .eq("prospect_id", prospect.id);
+    if (getServicesError) throw getServicesError;
+    // Delete all existing services
+    if (existingServices?.length > 0) {
+      const { error: deleteError } = await supabase
+        .from("services")
+        .delete()
+        .eq("prospect_id", prospect.id);
+      if (deleteError) throw deleteError;
+    }
+    // Insert all services as new entries
+    if (prospect.services.length > 0) {
+      const servicesData = prospect.services.map((service) => {
+        // Ensure we have valid details object
+        const details = service.details[service.type] || {};
+
+        // Add default values based on service type
+        const defaultDetails = {
+          couch: { material: "fabric", seats: 7 },
+          carpet: { size: "medium", quantity: 1 },
+          "auto-detailing": { cleaningMode: "seats-only", seats: 5 },
+          mattress: { size: "medium", quantity: 1 },
+        };
+        // Merge default details with provided details
+        const finalDetails = {
+          ...defaultDetails[service.type],
+          ...details,
+        };
+        return {
+          id: generateUUID(),
+          prospect_id: prospect.id,
+          type: service.type,
+          details: finalDetails, // Use the merged details
+        };
+      });
+      // Insert services one by one to avoid potential conflicts
+      for (const serviceData of servicesData) {
+        const { error: insertError } = await supabase
+          .from("services")
+          .insert(serviceData);
+        if (insertError) {
+          console.error("Error inserting service:", insertError);
+          throw insertError;
+        }
+      }
+    }
 
     // 2. Handle reminders update
     await handleRemindersUpdate(prospect);
