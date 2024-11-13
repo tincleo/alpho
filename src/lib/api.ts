@@ -127,34 +127,43 @@ export async function fetchProspects() {
 }
 
 // Create a new prospect with services
-export async function createProspect(newProspect: Omit<Prospect, 'id'>) {
+export const createProspect = async (prospect: Omit<Prospect, 'id'>): Promise<Prospect> => {
   try {
-    // Create prospect first
+    // Map the prospect data to match database column names
+    // Only include columns that exist in the database schema
+    const prospectData = {
+      name: prospect.name,
+      phone: prospect.phone,
+      location_id: prospect.location_id,
+      address: prospect.address,
+      datetime: prospect.datetime,
+      notes: prospect.notes,
+      status: prospect.status,
+      is_all_day: prospect.isAllDay,
+      priority: prospect.priority
+    };
+
+    // Insert the prospect
     const { data: createdProspect, error: prospectError } = await supabase
       .from('prospects')
-      .insert({
-        name: newProspect.name,
-        phone: newProspect.phone,
-        location_id: newProspect.location_id,
-        address: newProspect.address,
-        datetime: newProspect.datetime,
-        status: newProspect.status,
-        priority: newProspect.priority,
-        is_all_day: newProspect.isAllDay,
-        notes: newProspect.notes
-      })
+      .insert([prospectData])
       .select()
       .single();
 
-    if (prospectError) throw prospectError;
+    if (prospectError) {
+      throw prospectError;
+    }
 
-    // Create services with proper prospect_id
-    if (newProspect.services.length > 0) {
-      const servicesData = newProspect.services.map((service: Service) => ({
-        id: generateUUID(),
+    if (!createdProspect) {
+      throw new Error('Failed to create prospect');
+    }
+
+    // Insert services for the prospect
+    if (prospect.services && prospect.services.length > 0) {
+      const servicesData = prospect.services.map(service => ({
         prospect_id: createdProspect.id,
         type: service.type,
-        details: service.details[service.type]
+        details: service.details[service.type] || {}
       }));
 
       const { error: servicesError } = await supabase
@@ -162,19 +171,13 @@ export async function createProspect(newProspect: Omit<Prospect, 'id'>) {
         .insert(servicesData);
 
       if (servicesError) {
-        // Rollback prospect creation if services fail
-        await supabase
-          .from('prospects')
-          .delete()
-          .eq('id', createdProspect.id);
         throw servicesError;
       }
     }
 
-    // Create reminders if any
-    if (newProspect.reminders?.length) {
-      const remindersData = newProspect.reminders.map((reminder: Reminder) => ({
-        id: generateUUID(),
+    // Insert reminders for the prospect
+    if (prospect.reminders && prospect.reminders.length > 0) {
+      const remindersData = prospect.reminders.map(reminder => ({
         prospect_id: createdProspect.id,
         datetime: reminder.datetime,
         note: reminder.note || '',
@@ -186,21 +189,33 @@ export async function createProspect(newProspect: Omit<Prospect, 'id'>) {
         .insert(remindersData);
 
       if (remindersError) {
-        // Rollback prospect and services if reminders fail
-        await supabase
-          .from('prospects')
-          .delete()
-          .eq('id', createdProspect.id);
         throw remindersError;
       }
     }
 
-    return fetchProspects();
+    // Get the services and reminders for the created prospect
+    const { data: services } = await supabase
+      .from('services')
+      .select('*')
+      .eq('prospect_id', createdProspect.id);
+
+    const { data: reminders } = await supabase
+      .from('reminders')
+      .select('*')
+      .eq('prospect_id', createdProspect.id)
+      .order('datetime', { ascending: true });
+
+    // Return the complete prospect with services and reminders
+    return rowToProspect(
+      createdProspect,
+      services || [],
+      reminders || []
+    );
   } catch (error) {
     console.error('Error creating prospect:', error);
     throw error;
   }
-}
+};
 
 // Update an existing prospect and its services
 export async function updateProspect(prospect: Prospect) {

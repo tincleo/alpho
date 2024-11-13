@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, MapPin } from 'lucide-react';
+import { Clock, MapPin, Loader2 } from 'lucide-react';
 import { Prospect } from '../../types/calendar';
 import { format } from 'date-fns';
 
@@ -43,30 +43,69 @@ export function ProspectPreview({
   };
 
   const handleDragStart = (e: React.DragEvent) => {
-    if (!draggable) return;
+    if (!draggable || prospect.saveStatus === 'saving') return;
     e.stopPropagation();
     onDragStart?.(prospect);
   };
 
-  const getServiceSummary = () => {
-    return prospect.services.map(service => SERVICE_TYPES[service.type]).join(', ');
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // If saving, do nothing
+    if (prospect.saveStatus === 'saving') return;
+    
+    // If error, pass to parent for retry
+    if (prospect.saveStatus === 'error') {
+      onClick(e);
+      return;
+    }
+    
+    // Only allow click if not saving or saved
+    if (!prospect.saveStatus || prospect.saveStatus === 'saved') {
+      onClick(e);
+    }
+  };
+
+  const getBaseClasses = () => {
+    const common = `
+      ${prospect.saveStatus === 'saving' ? 'opacity-60 cursor-progress' : ''}
+      ${prospect.saveStatus === 'error' ? 'border-red-300 bg-red-50' : ''}
+      ${!prospect.saveStatus || prospect.saveStatus === 'saved' ? 'hover:shadow-sm' : ''}
+    `;
+
+    if (view === 'week' || view === 'month') {
+      return `px-1.5 py-1 rounded cursor-pointer transition-all text-xs 
+        ${prospect.isAllDay 
+          ? 'bg-yellow-50 border border-yellow-200 sticky top-6 z-10' 
+          : 'bg-white border border-gray-200'}
+        ${common}
+      `;
+    }
+
+    if (view === 'agenda') {
+      return `px-2 py-2 rounded-lg border 
+        ${prospect.isAllDay ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-gray-100'}
+        ${common}
+      `;
+    }
+
+    return '';
   };
 
   if (view === 'week') {
     return (
       <div
-        onClick={onClick}
-        draggable={draggable}
+        onClick={handleClick}
+        draggable={!prospect.saveStatus}
         onDragStart={handleDragStart}
         onDragEnd={onDragEnd}
-        className={`px-1.5 py-1 rounded cursor-pointer hover:shadow-sm transition-all text-xs ${
-          prospect.isAllDay 
-            ? 'bg-yellow-50 border border-yellow-200 sticky top-6 z-10' 
-            : 'bg-white border border-gray-200'
-        }`}
+        className={getBaseClasses()}
       >
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-1">
+            {prospect.saveStatus === 'saving' && (
+              <Loader2 className="w-3 h-3 animate-spin text-gray-400" />
+            )}
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusColors[prospect.status]}`} />
             <span className="font-medium truncate">
               {SERVICE_TYPES[prospect.services[0].type]}
@@ -84,17 +123,16 @@ export function ProspectPreview({
   if (view === 'month') {
     return (
       <div
-        onClick={onClick}
-        draggable={draggable}
+        onClick={handleClick}
+        draggable={!prospect.saveStatus}
         onDragStart={handleDragStart}
         onDragEnd={onDragEnd}
-        className={`px-1.5 py-1 rounded cursor-pointer hover:shadow-sm transition-all text-xs ${
-          prospect.isAllDay 
-            ? 'bg-yellow-50 border border-yellow-200 sticky top-6 z-10' 
-            : 'bg-white border border-gray-200'
-        }`}
+        className={getBaseClasses()}
       >
         <div className="flex items-center gap-1">
+          {prospect.saveStatus === 'saving' && (
+            <Loader2 className="w-3 h-3 animate-spin text-gray-400" />
+          )}
           <span className={`w-1.5 h-1.5 rounded-full ${statusColors[prospect.status]}`} />
           <span className="font-medium truncate flex-1">
             {SERVICE_TYPES[prospect.services[0].type]}
@@ -113,20 +151,23 @@ export function ProspectPreview({
   if (view === 'agenda') {
     return (
       <div
-        onClick={onClick}
-        draggable={draggable}
+        onClick={handleClick}
+        draggable={!prospect.saveStatus}
         onDragStart={handleDragStart}
         onDragEnd={onDragEnd}
-        className={`px-2 py-2 rounded-lg border ${
-          prospect.isAllDay ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-gray-100'
-        }`}
+        className={getBaseClasses()}
       >
         <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2 min-w-0">
+                {prospect.saveStatus === 'saving' && (
+                  <Loader2 className="w-3 h-3 animate-spin text-gray-400" />
+                )}
                 <span className={`w-1.5 h-1.5 rounded-full ${statusColors[prospect.status]}`} />
-                <span className="font-medium text-sm text-gray-900 truncate">{getServiceSummary()}</span>
+                <span className="font-medium text-sm text-gray-900 truncate">
+                  {prospect.services.map(s => SERVICE_TYPES[s.type]).join(', ')}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className={`px-1.5 py-0.5 rounded-full text-xs ${statusBadgeColors[prospect.status]}`}>

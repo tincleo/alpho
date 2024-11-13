@@ -13,6 +13,7 @@ interface AddProspectModalProps {
   initialProspect?: Prospect;
   initialType?: 'prospect' | 'follow-up';
   hideServices?: boolean;
+  prefillData?: Omit<Prospect, 'id'>;
 }
 
 const PRIORITIES: Priority[] = ['low', 'medium', 'high'];
@@ -37,7 +38,7 @@ const formatPhoneNumber = (value: string) => {
   return `${numbers.slice(0, 3)} ${numbers.slice(3, 5)} ${numbers.slice(5, 7)} ${numbers.slice(7)}`;
 };
 
-export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect, initialType, hideServices = false }: AddProspectModalProps) {
+export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect, initialType, hideServices = false, prefillData }: AddProspectModalProps) {
   const [selectedServices, setSelectedServices] = React.useState<ServiceInstance[]>(
     initialProspect?.services.map(s => ({
       id: s.id,
@@ -52,25 +53,25 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
     }), {}) ?? {}
   );
   const [formData, setFormData] = React.useState({
-    location: initialProspect?.location ?? '',
-    address: initialProspect?.address ?? '',
-    phone: initialProspect?.phone ?? '',
-    date: initialProspect?.datetime
-      ? format(new Date(initialProspect.datetime), 'yyyy-MM-dd')
+    location: prefillData?.location ?? initialProspect?.location ?? '',
+    address: prefillData?.address ?? initialProspect?.address ?? '',
+    phone: prefillData?.phone ?? initialProspect?.phone ?? '',
+    date: prefillData?.datetime
+      ? format(new Date(prefillData.datetime), 'yyyy-MM-dd')
       : selectedDate 
         ? format(selectedDate, 'yyyy-MM-dd')
         : format(new Date(), 'yyyy-MM-dd'),
-    startTime: initialProspect?.datetime
-      ? format(new Date(initialProspect.datetime), 'HH:mm')
+    startTime: prefillData?.datetime
+      ? format(new Date(prefillData.datetime), 'HH:mm')
       : '09:00',
-    endTime: initialProspect?.endTime
-      ? format(new Date(initialProspect.endTime), 'HH:mm')
+    endTime: prefillData?.endTime
+      ? format(new Date(prefillData.endTime), 'HH:mm')
       : '11:00',
-    notes: initialProspect?.notes ?? '',
-    status: initialProspect?.status ?? 'pending',
-    isAllDay: initialProspect?.isAllDay ?? false,
-    priority: initialProspect?.priority ?? 'medium',
-    name: initialProspect?.name ?? '',
+    notes: prefillData?.notes ?? initialProspect?.notes ?? '',
+    status: prefillData?.status ?? initialProspect?.status ?? 'pending',
+    isAllDay: prefillData?.isAllDay ?? initialProspect?.isAllDay ?? false,
+    priority: prefillData?.priority ?? initialProspect?.priority ?? 'medium',
+    name: prefillData?.name ?? initialProspect?.name ?? '',
   });
   const [prospectType, setProspectType] = React.useState<'prospect' | 'follow-up'>(
     initialType ?? (selectedDate ? 'prospect' : 'follow-up')

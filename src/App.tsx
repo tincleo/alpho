@@ -13,6 +13,7 @@ import { fetchProspects, createProspect, deleteProspect, updateReminder, updateP
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './styles/toast.css';
+import { v4 as uuidv4 } from 'uuid';
 
 const LOCATIONS: Location[] = [
   'Bastos', 'Mvan', 'Nsam', 'Mvog-Mbi', 'Essos', 
@@ -56,16 +57,75 @@ export default function App() {
   };
 
   const handleAddProspect = async (newProspect: Omit<Prospect, 'id'>) => {
+    // Create temporary ID for optimistic update
+    const tempId = uuidv4();
+    
+    // Create optimistic prospect with proper structure
+    const optimisticProspect: Prospect = {
+      ...newProspect,
+      id: tempId,
+      saveStatus: 'saving',
+      originalData: newProspect,
+      // Ensure services array is properly structured
+      services: newProspect.services.map(service => ({
+        id: service.id || uuidv4(),
+        type: service.type,
+        details: service.details || {}
+      })),
+      // Ensure other required fields have default values
+      status: newProspect.status || 'pending',
+      priority: newProspect.priority || 'medium',
+      isAllDay: newProspect.isAllDay || false,
+      reminders: newProspect.reminders || []
+    };
+
+    // Add to UI immediately
+    setProspects(prev => [...prev, optimisticProspect]);
+
     try {
-      setIsLoading(true);
-      const updatedProspects = await createProspect(newProspect);
-      setProspects(updatedProspects);
-      setShowAddModal(false);
-      setSelectedDate(undefined);
+      // createProspect should return the newly created prospect, not an array
+      const createdProspect = await createProspect(newProspect);
+
+      if (!createdProspect) {
+        throw new Error('No response from server');
+      }
+
+      // Update the prospects list with the created prospect
+      setProspects(prev => 
+        prev.map(p => {
+          if (p.id === tempId) {
+            return {
+              ...createdProspect,
+              saveStatus: undefined, // Remove save status to enable interactions
+              services: createdProspect.services.map(service => ({
+                id: service.id,
+                type: service.type,
+                details: service.details || {}
+              })),
+              reminders: createdProspect.reminders || []
+            };
+          }
+          return p;
+        })
+      );
+
+      return createdProspect; // Return for toast.promise
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create prospect');
-    } finally {
-      setIsLoading(false);
+      // Keep prospect but mark as error
+      setProspects(prev => 
+        prev.map(p => p.id === tempId ? 
+          { ...p, saveStatus: 'error' } 
+          : p
+        )
+      );
+      throw err; // Let the toast handler catch this
+    }
+  };
+
+  const handleRetryProspectCreation = (prospect: Prospect) => {
+    if (prospect.originalData) {
+      setShowAddModal(true);
+      setInitialProspectData(prospect.originalData);
     }
   };
 
@@ -96,9 +156,16 @@ export default function App() {
 
   const filteredProspects = React.useMemo(() => {
     const filtered = prospects.filter(prospect => {
-      const hasSelectedService = prospect.services.some(service => selectedServices.includes(service.type));
+      if (!prospect || !Array.isArray(prospect.services)) {
+        return false;
+      }
+
+      const hasSelectedService = prospect.services.some(service => 
+        service && service.type && selectedServices.includes(service.type)
+      );
       const hasSelectedStatus = selectedStatuses.includes(prospect.status);
       const hasSelectedLocation = prospect.location ? selectedLocations.includes(prospect.location as Location) : false;
+      
       return hasSelectedService && hasSelectedStatus && hasSelectedLocation;
     });
 

@@ -3,6 +3,7 @@ import { X, Search, Check } from 'lucide-react';
 import { Prospect, Priority } from '../../types/calendar';
 import { ProspectPreview } from './ProspectPreview';
 import { ProspectModal } from './ProspectModal';
+import { format } from 'date-fns';
 
 interface ProspectsSidebarProps {
   prospects: Prospect[];
@@ -28,6 +29,21 @@ export function ProspectsSidebar({
   const [selectedPriorities, setSelectedPriorities] = React.useState<Priority[]>([...PRIORITY_OPTIONS]);
   const [showStatusDropdown, setShowStatusDropdown] = React.useState(false);
   const [showPriorityDropdown, setShowPriorityDropdown] = React.useState(false);
+
+  const groupedProspects = React.useMemo(() => {
+    if (!Array.isArray(prospects)) return {};
+    
+    return prospects.reduce((acc, prospect) => {
+      if (!prospect?.datetime) return acc;
+      
+      const date = format(new Date(prospect.datetime), 'yyyy-MM-dd');
+      if (!acc[date]) {
+        acc[date] = [];
+      }
+      acc[date].push(prospect);
+      return acc;
+    }, {} as Record<string, Prospect[]>);
+  }, [prospects]);
 
   const filteredProspects = React.useMemo(() => {
     const query = searchQuery.toLowerCase();

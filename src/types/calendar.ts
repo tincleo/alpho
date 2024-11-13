@@ -28,6 +28,9 @@ export interface Reminder {
   updated_at?: string;
 }
 
+export type ProspectStatus = "pending" | "confirmed" | "completed" | "cancelled";
+export type SaveStatus = "saving" | "error" | "saved" | undefined;
+
 export interface Prospect {
   id: string;
   name: string;
@@ -37,11 +40,13 @@ export interface Prospect {
   location_id?: string;
   address?: string;
   notes?: string;
-  status: "pending" | "confirmed" | "completed" | "cancelled";
+  status: ProspectStatus;
   priority: "low" | "medium" | "high";
   isAllDay: boolean;
   services: Service[];
   reminders: Reminder[];
+  saveStatus?: SaveStatus;
+  originalData?: Omit<Prospect, 'id' | 'saveStatus' | 'originalData'>;
 }
 
 export interface DayProspectsModalProps {

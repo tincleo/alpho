@@ -34,7 +34,7 @@ const STATUS_COLORS = {
 };
 
 
-export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, onStatusChange, onLocationChange, prospects = [] }: SidebarProps) {
+export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, onStatusChange, onLocationChange, prospects }: SidebarProps) {
   const [selectedLocations, setSelectedLocations] = React.useState<Location[]>([]);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isLocationsOpen, setIsLocationsOpen] = React.useState(false);
@@ -42,6 +42,29 @@ export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, o
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
   const [locations, setLocations] = React.useState<Location[]>([]);
+
+  const serviceCounts = React.useMemo(() => {
+    const counts: Record<ServiceType, number> = {
+      'couch': 0,
+      'carpet': 0,
+      'auto-detailing': 0,
+      'mattress': 0
+    };
+
+    if (!Array.isArray(prospects)) return counts;
+
+    prospects.forEach(prospect => {
+      if (!prospect?.services) return;
+      
+      prospect.services.forEach(service => {
+        if (service?.type && service.type in counts) {
+          counts[service.type]++;
+        }
+      });
+    });
+
+    return counts;
+  }, [prospects]);
 
   React.useEffect(() => {
     onLocationChange?.(selectedLocations);
