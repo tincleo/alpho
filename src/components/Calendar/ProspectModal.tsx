@@ -186,6 +186,32 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
     }
   };
 
+  const handleDeleteReminder = async (reminderId: string) => {
+    try {
+      setIsLoading(true);
+
+      // Remove reminder from local state
+      const updatedReminders = currentProspect.reminders.filter(
+        (reminder) => reminder.id !== reminderId
+      );
+      const updatedProspect = {
+        ...currentProspect,
+        reminders: updatedReminders,
+      };
+      setCurrentProspect(updatedProspect);
+
+      // Save to database
+      await onEdit(updatedProspect);
+    } catch (error) {
+      // Revert on error
+      setCurrentProspect(prospect);
+      setError("Failed to delete reminder");
+      console.error("Failed to delete reminder:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleAddReminder = async (newReminder: Omit<Reminder, 'id' | 'prospect_id' | 'created_at' | 'updated_at'>) => {
     try {
       setIsLoading(true);
@@ -281,10 +307,11 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
             <RemindersAccordion
               reminders={currentProspect.reminders}
               prospectId={currentProspect.id}
+              handleDeleteReminder={handleDeleteReminder}
               onChange={(updatedReminders) => {
-                setCurrentProspect(prev => ({
+                setCurrentProspect((prev) => ({
                   ...prev,
-                  reminders: updatedReminders
+                  reminders: updatedReminders,
                 }));
               }}
               onAddReminder={handleAddReminder}
@@ -296,10 +323,13 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
               <div className="p-4">
                 <ServiceTypeSelector
                   selectedServices={localServices}
-                  serviceDetails={localServices.reduce((acc, s) => ({
-                    ...acc,
-                    [s.id]: s.details[s.type]
-                  }), {})}
+                  serviceDetails={localServices.reduce(
+                    (acc, s) => ({
+                      ...acc,
+                      [s.id]: s.details[s.type],
+                    }),
+                    {}
+                  )}
                   onToggleService={handleServiceToggle}
                   onUpdateDetails={handleServiceDetailsUpdate}
                   readOnly={false}
@@ -309,13 +339,24 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
 
             {/* Status and Priority */}
             <div className="flex flex-wrap gap-2">
-              <span className={`px-2.5 py-1 rounded-full text-sm ${statusColors[currentProspect.status]}`}>
-                {currentProspect.status.charAt(0).toUpperCase() + currentProspect.status.slice(1)}
+              <span
+                className={`px-2.5 py-1 rounded-full text-sm ${
+                  statusColors[currentProspect.status]
+                }`}
+              >
+                {currentProspect.status.charAt(0).toUpperCase() +
+                  currentProspect.status.slice(1)}
               </span>
-              <span className={`px-2.5 py-1 rounded-full text-sm ${priorityColors[currentProspect.priority]}`}>
+              <span
+                className={`px-2.5 py-1 rounded-full text-sm ${
+                  priorityColors[currentProspect.priority]
+                }`}
+              >
                 <div className="flex items-center gap-1">
                   <Flag className="w-3 h-3" />
-                  {currentProspect.priority.charAt(0).toUpperCase() + currentProspect.priority.slice(1)} Priority
+                  {currentProspect.priority.charAt(0).toUpperCase() +
+                    currentProspect.priority.slice(1)}{" "}
+                  Priority
                 </div>
               </span>
               {currentProspect.isAllDay && (
@@ -329,11 +370,18 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
             {currentProspect.datetime && (
               <div className="flex items-center gap-2 text-gray-600">
                 <Calendar className="w-4 h-4" />
-                <span>{format(new Date(currentProspect.datetime), 'EEEE, MMMM d, yyyy')}</span>
+                <span>
+                  {format(
+                    new Date(currentProspect.datetime),
+                    "EEEE, MMMM d, yyyy"
+                  )}
+                </span>
                 {!currentProspect.isAllDay && currentProspect.datetime && (
                   <>
                     <Clock className="w-4 h-4 ml-2" />
-                    <span>{format(new Date(currentProspect.datetime), 'HH:mm')}</span>
+                    <span>
+                      {format(new Date(currentProspect.datetime), "HH:mm")}
+                    </span>
                   </>
                 )}
               </div>
@@ -347,11 +395,13 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
                   className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
                 >
                   <Phone className="w-4 h-4 group-hover:text-blue-500" />
-                  <span className="group-hover:text-blue-500">{currentProspect.phone}</span>
+                  <span className="group-hover:text-blue-500">
+                    {currentProspect.phone}
+                  </span>
                 </button>
 
                 {showPhoneMenu && (
-                  <div 
+                  <div
                     ref={phoneMenuRef}
                     className="absolute left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
                   >
@@ -377,8 +427,12 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
                 <div className="flex items-start gap-2 text-gray-600">
                   <MapPin className="w-4 h-4 mt-1" />
                   <div>
-                    {currentProspect.location && <div>{currentProspect.location}</div>}
-                    {currentProspect.address && <div className="text-sm">{currentProspect.address}</div>}
+                    {currentProspect.location && (
+                      <div>{currentProspect.location}</div>
+                    )}
+                    {currentProspect.address && (
+                      <div className="text-sm">{currentProspect.address}</div>
+                    )}
                   </div>
                 </div>
               )}
@@ -387,7 +441,9 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
             {/* Notes */}
             {currentProspect.notes && (
               <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{currentProspect.notes}</p>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  {currentProspect.notes}
+                </p>
               </div>
             )}
           </div>
@@ -411,9 +467,12 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
                     <AlertTriangle className="w-5 h-5 text-red-600" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-900">Delete Prospect</h3>
+                    <h3 className="text-sm font-medium text-gray-900">
+                      Delete Prospect
+                    </h3>
                     <p className="mt-1 text-sm text-gray-500">
-                      Are you sure you want to delete this prospect? This action cannot be undone.
+                      Are you sure you want to delete this prospect? This action
+                      cannot be undone.
                     </p>
                     <div className="mt-3 flex gap-2 justify-end">
                       <button
@@ -430,7 +489,7 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
                         className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
                         disabled={isLoading}
                       >
-                        {isLoading ? 'Deleting...' : 'Delete'}
+                        {isLoading ? "Deleting..." : "Delete"}
                       </button>
                     </div>
                   </div>
@@ -438,7 +497,7 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
               </div>
             )}
           </div>
-          
+
           <button
             onClick={() => setShowEditModal(true)}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
@@ -453,9 +512,9 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
         <AddProspectModal
           initialProspect={{
             ...currentProspect,
-            reminders: reminders
+            reminders: reminders,
           }}
-          initialType={currentProspect.datetime ? 'prospect' : 'follow-up'}
+          initialType={currentProspect.datetime ? "prospect" : "follow-up"}
           onClose={() => setShowEditModal(false)}
           onAdd={handleEdit}
           hideServices={true}

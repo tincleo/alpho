@@ -7,8 +7,10 @@ import { updateReminder } from '../../lib/api';
 interface RemindersAccordionProps {
   reminders: Reminder[];
   prospectId: string;
+  onUpdateReminder: (reminders: Reminder[]) => void;
   onChange: (reminders: Reminder[]) => void;
   onAddReminder: (reminders: Reminder[]) => void;
+  handleDeleteReminder: (reminderId: string) => void;
   onRefresh: () => Promise<void>;
 }
 
@@ -19,6 +21,8 @@ export function RemindersAccordion({
   prospectId,
   onChange,
   onAddReminder,
+  onUpdateReminder,
+  handleDeleteReminder,
 }: RemindersAccordionProps) {
   const [localReminders, setLocalReminders] =
     React.useState<Reminder[]>(reminders);
@@ -109,6 +113,7 @@ export function RemindersAccordion({
   };
 
   const deleteReminder = (reminderId: string) => {
+    handleDeleteReminder(reminderId);
     onChange(localReminders.filter((reminder) => reminder.id !== reminderId));
   };
 
