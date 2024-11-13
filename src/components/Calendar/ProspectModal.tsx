@@ -129,61 +129,84 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
     }
   };
 
-  const handleServiceToggle = async (service: ServiceInstance) => {
-    try {
-      // Optimistically update local state
-      const updatedServices = currentProspect.services.some(s => s.id === service.id)
-        ? localServices.filter(s => s.id !== service.id) // Remove service
-        : [...localServices, {  // Add service
-            id: service.id,
-            type: service.type,
-            details: { [service.type]: service.details }
-          }];
-      
-      setLocalServices(updatedServices);
+  const handleServiceToggle = async (
+    service: ServiceInstance
+  ): Promise<void> => {
+    return new Promise(async (resolve) => {
+      // Perform synchronous updates
+      try {
+        // Optimistically update local state
+        const updatedServices = currentProspect.services.some(
+          (s) => s.id === service.id
+        )
+          ? localServices.filter((s) => s.id !== service.id) // Remove service
+          : [
+              ...localServices,
+              {
+                // Add service
+                id: service.id,
+                type: service.type,
+                details: { [service.type]: service.details },
+              },
+            ];
 
-      // Update in background
-      const updatedProspect = {
-        ...currentProspect,
-        services: updatedServices
-      };
+        setLocalServices(updatedServices);
 
-      await onEdit(updatedProspect);
-      setCurrentProspect(updatedProspect);
-    } catch (error) {
-      // Revert on error
-      setLocalServices(currentProspect.services);
-      setError('Failed to update services');
-      console.error('Failed to update services:', error);
-    }
+        // Update in background
+        const updatedProspect = {
+          ...currentProspect,
+          services: updatedServices,
+        };
+
+        await onEdit(updatedProspect);
+        setCurrentProspect(updatedProspect);
+      } catch (error) {
+        // Revert on error
+        setLocalServices(currentProspect.services);
+        setError("Failed to update services");
+        console.error("Failed to update services:", error);
+      }
+      resolve();
+
+    });
+
   };
 
-  const handleServiceDetailsUpdate = async (serviceId: string, details: ServiceDetails[string]) => {
-    try {
-      // Optimistically update local state
-      const updatedServices = localServices.map(service => 
-        service.id === serviceId ? {
-          ...service,
-          details: { [service.type]: details }
-        } : service
-      );
-      
-      setLocalServices(updatedServices);
 
-      // Update in background
-      const updatedProspect = {
-        ...currentProspect,
-        services: updatedServices
-      };
+  const handleServiceDetailsUpdate = async (
+    serviceId: string,
+    details: ServiceDetails[string]
+  ): Promise<void> => {
+    return new Promise(async (resolve) => {
+      try {
+        // Optimistically update local state
+        const updatedServices = localServices.map((service) =>
+          service.id === serviceId
+            ? {
+                ...service,
+                details: { [service.type]: details },
+              }
+            : service
+        );
 
-      await onEdit(updatedProspect);
-      setCurrentProspect(updatedProspect);
-    } catch (error) {
-      // Revert on error
-      setLocalServices(currentProspect.services);
-      setError('Failed to update service details');
-      console.error('Failed to update service details:', error);
-    }
+        setLocalServices(updatedServices);
+
+        // Update in background
+        const updatedProspect = {
+          ...currentProspect,
+          services: updatedServices,
+        };
+
+        await onEdit(updatedProspect);
+        setCurrentProspect(updatedProspect);
+      } catch (error) {
+        // Revert on error
+        setLocalServices(currentProspect.services);
+        setError("Failed to update service details");
+        console.error("Failed to update service details:", error);
+      }
+      resolve();
+    });
   };
 
   const handleDeleteReminder = async (reminderId: string) => {
