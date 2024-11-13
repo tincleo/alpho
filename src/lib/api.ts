@@ -121,7 +121,7 @@ export async function fetchProspects() {
 
     prospectsList.push(await rowToProspect(prospect, services || [], reminders || []));
   }
-console.log({ prospectsList });
+// console.log({ prospectsList });
 
   return prospectsList;
 }

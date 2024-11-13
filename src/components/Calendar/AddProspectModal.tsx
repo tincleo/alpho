@@ -4,6 +4,7 @@ import { format, setHours, setMinutes, parse, addHours } from 'date-fns';
 import { Prospect, ServiceType, ServiceDetails, Location, Priority, Reminder } from '../../types/calendar';
 import { ServiceTypeSelector } from './ServiceTypeSelector';
 import { fetchLocationIdByName, fetchLocations, LocationRow } from '../../lib/api';
+import { toast } from 'react-toastify';
 
 interface AddProspectModalProps {
   onClose: () => void;
@@ -37,7 +38,6 @@ const formatPhoneNumber = (value: string) => {
 };
 
 export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect, initialType, hideServices = false }: AddProspectModalProps) {
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [selectedServices, setSelectedServices] = React.useState<ServiceInstance[]>(
     initialProspect?.services.map(s => ({
       id: s.id,
@@ -144,22 +144,22 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
     e.preventDefault();
 
     if (!formData.location) {
-      alert('Please select a location');
+      toast.error('Please select a location');
       return;
     }
 
     if (prospectType === 'prospect' && !formData.date) {
-      alert('Prospect date is required for confirmed prospects');
+      toast.error('Prospect date is required for confirmed prospects');
       return;
     }
 
     if (formData.status === 'confirmed' && (!formData.startTime || !formData.endTime)) {
-      alert('Start and end time are required for confirmed prospects');
+      toast.error('Start and end time are required for confirmed prospects');
       return;
     }
 
     if (selectedServices.length === 0) {
-      alert('Please select at least one service');
+      toast.error('Please select at least one service');
       return;
     }
 
@@ -172,34 +172,42 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
       }
     }));
 
-    try {
-      setIsSubmitting(true);
+    const location = await fetchLocationIdByName(formData.location);
+    const newProspect = {
+      services,
+      location_id: location?.id,
+      location: location?.name,
+      address: formData.address,
+      phone: formData.phone,
+      datetime:
+        prospectType === "prospect"
+          ? new Date(`${formData.date}T${formData.startTime}`).toISOString()
+          : new Date().toISOString(),
+      notes: formData.notes,
+      status: formData.status,
+      isAllDay: formData.isAllDay,
+      priority: formData.priority,
+      name: formData.name,
+      reminders,
+    };
 
-      const location = await fetchLocationIdByName(formData.location);
-      await onAdd({
-        services,
-        location_id: location?.id,
-        location: location?.name,
-        address: formData.address,
-        phone: formData.phone,
-        datetime:
-          prospectType === "prospect"
-            ? new Date(`${formData.date}T${formData.startTime}`).toISOString()
-            : new Date().toISOString(),
-        notes: formData.notes,
-        status: formData.status,
-        isAllDay: formData.isAllDay,
-        priority: formData.priority,
-        name: formData.name,
-        reminders,
-      });
-      onClose();
-    } catch (error) {
-      console.error('Failed to update prospect:', error);
-      alert('Failed to update prospect. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Close the modal immediately
+    onClose();
+
+    // Use toast.promise to track the prospect creation
+    toast.promise(
+      onAdd(newProspect),
+      {
+        pending: 'Creating prospect...',
+        success: 'Prospect created successfully 👌',
+        error: {
+          render({data}) {
+            // When the promise rejects, data will contain the error
+            return `Failed to create prospect: ${data.message}`;
+          }
+        }
+      }
+    );
   };
 
   // Helper function to generate UUID
@@ -221,7 +229,6 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            disabled={isSubmitting}
           >
             <X className="w-5 h-5" />
           </button>
@@ -403,7 +410,6 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
             type="button"
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-            disabled={isSubmitting}
           >
             Cancel
           </button>
@@ -411,9 +417,8 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
             type="submit"
             onClick={handleSubmit}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-            disabled={isSubmitting}
           >
-            {isSubmitting ? 'Saving...' : initialProspect ? 'Save Changes' : 'Create Prospect'}
+            {initialProspect ? 'Save Changes' : 'Create Prospect'}
           </button>
         </div>
       </div>

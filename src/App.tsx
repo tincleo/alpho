@@ -10,6 +10,8 @@ import { ProspectsSidebar } from './components/Calendar/ProspectsSidebar';
 import { RemindersPane } from './components/Calendar/RemindersPane';
 import { ProspectModal } from './components/Calendar/ProspectModal';
 import { fetchProspects, createProspect, deleteProspect, updateReminder, updateProspect } from './lib/api';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const LOCATIONS: Location[] = [
   'Bastos', 'Mvan', 'Nsam', 'Mvog-Mbi', 'Essos', 
@@ -262,6 +264,19 @@ export default function App() {
           <div className="text-sm text-gray-600">Saving changes...</div>
         </div>
       )}
+
+      <ToastContainer
+        position="bottom-center"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </div>
   );
 }

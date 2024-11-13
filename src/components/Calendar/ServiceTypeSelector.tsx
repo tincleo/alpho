@@ -170,7 +170,7 @@ function ServiceOptionsModal({
     switch (type) {
       case 'couch':
         if (!details.material || !details.seats) {
-          console.log('Current details:', details);
+          // console.log('Current details:', details);
           alert(`Please fill in all fields. Missing: ${!details.material ? 'Material' : ''} ${!details.seats ? 'Seats' : ''}`);
           return;
         }
@@ -178,14 +178,14 @@ function ServiceOptionsModal({
       case 'carpet':
       case 'mattress':
         if (!details.size || !details.quantity) {
-          console.log('Current details:', details);
+          // console.log('Current details:', details);
           alert(`Please fill in all fields. Missing: ${!details.size ? 'Size' : ''} ${!details.quantity ? 'Quantity' : ''}`);
           return;
         }
         break;
       case 'auto-detailing':
         if (!details.cleaningMode || !details.seats) {
-          console.log('Current details:', details);
+          // console.log('Current details:', details);
           alert(`Please fill in all fields. Missing: ${!details.cleaningMode ? 'Cleaning Mode' : ''} ${!details.seats ? 'Seats' : ''}`);
           return;
         }
