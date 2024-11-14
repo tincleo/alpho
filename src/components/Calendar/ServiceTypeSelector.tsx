@@ -67,7 +67,10 @@ function ServiceCard({
             .join(' ') 
           : '';
         return `${mode}, ${details.seats} Seats`;
-      
+      case 'mattress': {
+        const size = details.size?.charAt(0).toUpperCase() + details.size?.slice(1);
+        return `${size}, Qty: ${details.quantity}`;
+      }
       default:
         return '';
     }
