@@ -251,18 +251,15 @@ export const createProspect = async (prospect: Omit<Prospect, 'id'>): Promise<Pr
   }
 };
 
-// Update an existing prospect and its services
 export async function updateProspect(prospect: Prospect) {
   try {
-    // Start a transaction by using multiple operations
-
-    // 1. Update prospect first
+    // Update the prospect details
     const { error: prospectError } = await supabase
       .from("prospects")
       .update({
         name: prospect.name,
         phone: prospect.phone,
-        location_id: prospect?.location_id,
+        location_id: prospect.location_id,
         address: prospect.address,
         datetime: prospect.datetime,
         status: prospect.status,
@@ -274,26 +271,26 @@ export async function updateProspect(prospect: Prospect) {
       .eq("id", prospect.id);
 
     if (prospectError) {
-      console.error('Error updating prospect:', prospectError);
+      console.error("Error updating prospect:", prospectError);
       throw prospectError;
     }
 
-    // Get existing services and delete them in parallel
+    // Fetch current services
     const { data: existingServices, error: getServicesError } = await supabase
       .from("services")
       .select("*")
       .eq("prospect_id", prospect.id);
+
     if (getServicesError) {
-      console.error('Error fetching existing services:', getServicesError);
+      console.error("Error fetching existing services:", getServicesError);
       throw getServicesError;
     }
 
-    const deleteServicesPromise = existingServices?.length > 0
-      ? supabase.from("services").delete().eq("prospect_id", prospect.id)
-      : Promise.resolve({ error: null });
-
-    // Prepare new services data
-    const servicesData = prospect.services.map((service) => {
+    // Determine services to update, delete, and insert
+    const existingServiceIds = new Set(
+      existingServices.map((service) => service.id)
+    );
+    const newServicesData = prospect.services.map((service) => {
       const details = service.details[service.type] || {};
       const defaultDetails = {
         couch: { material: "fabric", seats: 7 },
@@ -305,43 +302,64 @@ export async function updateProspect(prospect: Prospect) {
         ...defaultDetails[service.type],
         ...details,
       };
+
       return {
-        id: generateUUID(),
+        id: service.id || generateUUID(),
         prospect_id: prospect.id,
         type: service.type,
         details: finalDetails,
       };
     });
 
-    // Insert new services in batch
-    const insertServicesPromise = servicesData.length > 0
-      ? supabase.from("services").insert(servicesData)
-      : Promise.resolve({ error: null });
+    const updateServices = newServicesData.filter((service) =>
+      existingServiceIds.has(service.id)
+    );
+    const insertServices = newServicesData.filter(
+      (service) => !existingServiceIds.has(service.id)
+    );
 
-    // Wait for both delete and insert operations to complete
-    const [deleteResult, insertResult] = await Promise.all([deleteServicesPromise, insertServicesPromise]);
+    // Batch update existing services
+    const updatePromises = updateServices.map((service) =>
+      supabase
+        .from("services")
+        .update({
+          type: service.type,
+          details: service.details,
+        })
+        .eq("id", service.id)
+    );
 
-    if (deleteResult?.error) {
-      console.error('Error deleting services:', deleteResult.error);
-      throw deleteResult.error;
+    // Batch insert new services
+    const insertPromise =
+      insertServices.length > 0
+        ? supabase.from("services").insert(insertServices)
+        : Promise.resolve({ error: null });
+
+    // Execute updates, inserts, and handle reminders concurrently
+    const [updateResult, insertResult, handleRemindersResult] =
+      await Promise.all([
+        ...updatePromises,
+        insertPromise,
+        handleRemindersUpdate(prospect),
+      ]);
+
+    if (updateResult?.error) {
+      console.error("Error updating services:", updateResult.error);
+      throw updateResult.error;
     }
+
     if (insertResult?.error) {
-      console.error('Error inserting services:', insertResult.error);
+      console.error("Error inserting new services:", insertResult.error);
       throw insertResult.error;
     }
 
-    // 2. Handle reminders update
-    await handleRemindersUpdate(prospect);
-
-    // 3. Handle services update (existing code)
-    // ... rest of the services update code remains the same
-
     return fetchProspects();
   } catch (error) {
-    console.error('Error updating prospect:', error);
+    console.error("Error updating prospect:", error);
     throw error;
   }
 }
+
 
 // Helper function to handle reminders update
 async function handleRemindersUpdate(prospect: Prospect) {
@@ -354,38 +372,37 @@ async function handleRemindersUpdate(prospect: Prospect) {
 
     if (remindersError) throw remindersError;
 
-    // Handle new reminders first (those with temp_ prefix)
+    // Separate new and existing reminders
     const newReminders = prospect.reminders.filter(r => r.id.startsWith('temp_'));
-    if (newReminders.length > 0) {
-      const newRemindersData = newReminders.map(reminder => ({
-        prospect_id: prospect.id,
-        datetime: reminder.datetime,
-        note: reminder.note || '',
-        completed: reminder.completed || false
-      }));
+    const existingRemindersToUpdate = prospect.reminders.filter(r => !r.id.startsWith('temp_'));
 
+    // Prepare new reminders data for insertion
+    const newRemindersData = newReminders.map(reminder => ({
+      prospect_id: prospect.id,
+      datetime: reminder.datetime,
+      note: reminder.note || '',
+      completed: reminder.completed || false
+    }));
+
+    // Insert new reminders in bulk if there are any
+    if (newRemindersData.length > 0) {
       const { error: insertError } = await supabase
         .from('reminders')
         .insert(newRemindersData);
-
       if (insertError) {
         console.error('Error inserting reminders:', insertError);
         throw insertError;
       }
     }
 
-    // Handle existing reminders (those without temp_ prefix)
-    const existingRemindersToUpdate = prospect.reminders.filter(r => !r.id.startsWith('temp_'));
-
-    // Update existing reminders
-    for (const reminder of existingRemindersToUpdate) {
-      // Validate datetime field before updating
+    // Update existing reminders in bulk
+    const updatePromises = existingRemindersToUpdate.map(reminder => {
+      // Skip any reminder missing a datetime field
       if (!reminder.datetime) {
         console.error(`Missing datetime for reminder ID ${reminder.id}`);
-        continue; // Skip this update if datetime is missing
+        return Promise.resolve(); // Skip this update if datetime is missing
       }
-
-      const { error: updateError } = await supabase
+      return supabase
         .from('reminders')
         .update({
           datetime: reminder.datetime,
@@ -394,21 +411,23 @@ async function handleRemindersUpdate(prospect: Prospect) {
         })
         .eq('id', reminder.id)
         .eq('prospect_id', prospect.id);
+    });
 
-      if (updateError) throw updateError;
-    }
+    // Execute all updates in parallel
+    await Promise.all(updatePromises);
 
-    // Delete reminders that no longer exist
+    // Determine reminders to delete (those that no longer exist in prospect.reminders)
     const currentReminderIds = existingRemindersToUpdate.map(r => r.id);
-    const remindersToDelete = (existingReminders || [])
-      .filter(r => !currentReminderIds.includes(r.id));
+    const remindersToDelete = (existingReminders || []).filter(
+      r => !currentReminderIds.includes(r.id)
+    );
 
+    // Delete obsolete reminders if any
     if (remindersToDelete.length > 0) {
       const { error: deleteError } = await supabase
         .from('reminders')
         .delete()
         .in('id', remindersToDelete.map(r => r.id));
-
       if (deleteError) throw deleteError;
     }
 
@@ -417,6 +436,7 @@ async function handleRemindersUpdate(prospect: Prospect) {
     throw error;
   }
 }
+
 
 
 // Delete a prospect and its related services

@@ -15,6 +15,7 @@ interface ServiceTypeSelectorProps {
   onToggleService: (service: ServiceInstance) => void;
   onUpdateDetails: (serviceId: string, details: ServiceDetails[string]) => void;
   readOnly?: boolean;
+  isAddProspectModal?: boolean;
 }
 
 interface ServiceCardProps {
@@ -381,6 +382,7 @@ export function ServiceTypeSelector({
   serviceDetails,
   onToggleService,
   onUpdateDetails,
+  isAddProspectModal,
   readOnly
 }: ServiceTypeSelectorProps) {
   const [showServiceMenu, setShowServiceMenu] = React.useState(false);
@@ -425,20 +427,22 @@ export function ServiceTypeSelector({
     }
 
     if (editingServiceId) {
-      // Update existing service
-      // await onUpdateDetails(editingServiceId, details);
-
-      // Use toast.promise to track the prospect creation
-      toast.promise(onUpdateDetails(editingServiceId, details), {
-        pending: "Updating service...",
-        success: "Service updated 👌",
-        error: {
-          render({ data }) {
-            // When the promise rejects, data will contain the error
-            return `Failed to create prospect: ${data.message}`;
+      if (!isAddProspectModal) {
+        // Use toast.promise to track the prospect creation
+        toast.promise(onUpdateDetails(editingServiceId, details), {
+          pending: "Updating service...",
+          success: "Service updated 👌",
+          error: {
+            render({ data }) {
+              // When the promise rejects, data will contain the error
+              return `Failed to create prospect: ${data.message}`;
+            },
           },
-        },
-      });
+        });
+      } else {
+        // Update existing service
+        await onUpdateDetails(editingServiceId, details);
+      }
     } else {
       // Add new service instance
       const newService: ServiceInstance = {
@@ -447,18 +451,21 @@ export function ServiceTypeSelector({
         details,
       };
 
-      // Use toast.promise to track the prospect creation
-      toast.promise(onToggleService(newService), {
-        pending: "Creating service...",
-        success: "Service created 👌",
-        error: {
-          render({ data }) {
-            // When the promise rejects, data will contain the error
-            return `Failed to create prospect: ${data.message}`;
+      if (!isAddProspectModal) {
+        // Use toast.promise to track the prospect creation
+        toast.promise(onToggleService(newService), {
+          pending: "Creating service...",
+          success: "Service created 👌",
+          error: {
+            render({ data }) {
+              // When the promise rejects, data will contain the error
+              return `Failed to create prospect: ${data.message}`;
+            },
           },
-        },
-      });
-      // await onToggleService(newService);
+        });
+      } else {
+        await onToggleService(newService);
+      }
     }
     setLoadingType(null);
 
@@ -481,9 +488,9 @@ export function ServiceTypeSelector({
          (s) => s.id === editingServiceId
        );
        if (serviceToDelete) {
-         // Trigger the actual deletion in the background
-         //  await onToggleService(serviceToDelete);
+       
 
+       if(!isAddProspectModal){
          // Use toast.promise to track the prospect creation
          toast.promise(onToggleService(serviceToDelete), {
            pending: "Deleting service...",
@@ -495,6 +502,10 @@ export function ServiceTypeSelector({
              },
            },
          });
+       } else {
+         // Trigger the actual deletion in the background
+          await onToggleService(serviceToDelete);
+       }
 
          // Close the modal immediately
          setEditingServiceId(null);

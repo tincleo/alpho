@@ -271,6 +271,7 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
 
             {!hideServices && (
               <ServiceTypeSelector
+              isAddProspectModal={true}
                 selectedServices={selectedServices}
                 serviceDetails={serviceDetails}
                 onToggleService={handleServiceToggle}
