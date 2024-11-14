@@ -96,34 +96,68 @@ const rowToProspect = async (
   };
 };
 
-// Fetch all prospects
-export async function fetchProspects() {
-  const { data: prospects, error: prospectsError } = await supabase
-    .from('prospects')
-    .select('*')
-    .order('datetime', { ascending: true });
-
-  if (prospectsError) throw prospectsError;
-
-  const prospectsList: Prospect[] = [];
-
-  for (const prospect of prospects) {
-    const { data: services } = await supabase
-      .from('services')
-      .select('*')
-      .eq('prospect_id', prospect.id);
-
-    const { data: reminders } = await supabase
-      .from('reminders')
-      .select('*')
-      .eq('prospect_id', prospect.id)
+// Fetch prospects with optional date range
+export async function fetchProspects(startDate?: Date, endDate?: Date) {
+  try {
+    let query = supabase
+      .from('prospects')
+      .select(`
+        *,
+        services!services_prospect_id_fkey (*),
+        reminders (*)`
+      )
       .order('datetime', { ascending: true });
 
-    prospectsList.push(await rowToProspect(prospect, services || [], reminders || []));
-  }
-// console.log({ prospectsList });
+    // If date range is provided, filter prospects
+    if (startDate && endDate) {
+      query = query
+        .gte('datetime', startDate.toISOString())
+        .lte('datetime', endDate.toISOString());
+    }
 
-  return prospectsList;
+    const { data: prospects, error: prospectsError } = await query;
+
+    if (prospectsError) throw prospectsError;
+
+    // Map the data to our Prospect type
+    const prospectsList = await Promise.all(
+      prospects.map(async (prospect) => {
+        const location = await fetchLocationById(prospect.location_id);
+        return {
+          id: prospect.id,
+          name: prospect.name ?? "",
+          phone: prospect.phone,
+          location: location?.name ?? "Bastos",
+          location_id: prospect.location_id,
+          address: prospect.address ?? "",
+          datetime: prospect.datetime,
+          status: prospect.status,
+          priority: prospect.priority,
+          isAllDay: prospect.is_all_day,
+          notes: prospect.notes ?? "",
+          services: prospect.services.map((s: any) => ({
+            id: s.id,
+            type: s.type as ServiceType,
+            details: { [s.type]: s.details } as ServiceDetails,
+          })),
+          reminders: prospect.reminders.map((r: any) => ({
+            id: r.id,
+            prospect_id: r.prospect_id,
+            datetime: r.datetime,
+            note: r.note ?? undefined,
+            completed: r.completed,
+            created_at: r.created_at,
+            updated_at: r.updated_at,
+          })),
+        };
+      })
+    );
+
+    return prospectsList;
+  } catch (error) {
+    console.error('Error fetching prospects:', error);
+    throw error;
+  }
 }
 
 // Create a new prospect with services

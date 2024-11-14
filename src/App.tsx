@@ -1,5 +1,5 @@
 import React from 'react';
-import { addWeeks, addMonths, subWeeks, subMonths, startOfWeek, startOfMonth } from 'date-fns';
+import { addWeeks, addMonths, subWeeks, subMonths, startOfWeek, startOfMonth, endOfWeek, endOfMonth } from 'date-fns';
 import { CalendarHeader } from './components/Calendar/CalendarHeader';
 import { CalendarGrid } from './components/Calendar/CalendarGrid';
 import { AgendaView } from './components/Calendar/AgendaView';
@@ -25,7 +25,8 @@ const LOCATIONS: Location[] = [
 export default function App() {
   const [currentDate, setCurrentDate] = React.useState(new Date(2024, 10, 1));
   const [viewMode, setViewMode] = React.useState<ViewMode>('month');
-  const [prospects, setProspects] = React.useState<Prospect[]>([]);
+  const [allProspects, setAllProspects] = React.useState<Prospect[]>([]);
+  const [calendarProspects, setCalendarProspects] = React.useState<Prospect[]>([]);
   const [showAddModal, setShowAddModal] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>();
   const [selectedServices, setSelectedServices] = React.useState<ServiceType[]>(['couch', 'carpet', 'auto-detailing', 'mattress']);
@@ -37,66 +38,101 @@ export default function App() {
   const [isInitialLoading, setIsInitialLoading] = React.useState(true);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [isLoadingCalendar, setIsLoadingCalendar] = React.useState(false);
 
-  // Fetch prospects on component mount
-  React.useEffect(() => {
-    loadProspects();
-  }, []);
+  // Function to get date range for current view
+  const getDateRange = () => {
+    if (viewMode === 'month') {
+      return {
+        start: startOfMonth(currentDate),
+        end: endOfMonth(currentDate)
+      };
+    }
+    if (viewMode === 'week') {
+      return {
+        start: startOfWeek(currentDate, { weekStartsOn: 1 }),
+        end: endOfWeek(currentDate, { weekStartsOn: 1 })
+      };
+    }
+    return null;
+  };
 
-  const loadProspects = async () => {
+  // Initial load - fetch all data for UI components
+  const loadAllData = async () => {
     try {
       setIsInitialLoading(true);
       setError(null);
-      const data = await fetchProspects();
-      setProspects(data);
+      const data = await fetchProspects(); // Fetch all prospects
+      setAllProspects(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load prospects');
+      setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setIsInitialLoading(false);
     }
   };
 
+  // Load calendar data only
+  const loadCalendarData = async () => {
+    try {
+      setIsLoadingCalendar(true);
+      const dateRange = getDateRange();
+      if (!dateRange) return;
+
+      const data = await fetchProspects(dateRange.start, dateRange.end);
+      setCalendarProspects(data);
+    } catch (err) {
+      console.error('Error loading calendar data:', err);
+    } finally {
+      setIsLoadingCalendar(false);
+    }
+  };
+
+  // Load all data on mount only once
+  React.useEffect(() => {
+    loadAllData();
+  }, []); // Empty dependency array - run once
+
+  // Load calendar data when view/date changes
+  React.useEffect(() => {
+    loadCalendarData();
+  }, [currentDate, viewMode]);
+
   const handleAddProspect = async (newProspect: Omit<Prospect, 'id'>) => {
-    // Create temporary ID for optimistic update
     const tempId = uuidv4();
-    
-    // Create optimistic prospect with proper structure
     const optimisticProspect: Prospect = {
       ...newProspect,
       id: tempId,
       saveStatus: 'saving',
       originalData: newProspect,
-      // Ensure services array is properly structured
       services: newProspect.services.map(service => ({
         id: service.id || uuidv4(),
         type: service.type,
         details: service.details || {}
       })),
-      // Ensure other required fields have default values
       status: newProspect.status || 'pending',
       priority: newProspect.priority || 'medium',
       isAllDay: newProspect.isAllDay || false,
       reminders: newProspect.reminders || []
     };
 
-    // Add to UI immediately
-    setProspects(prev => [...prev, optimisticProspect]);
+    // Add to both data sets
+    setAllProspects(prev => [...prev, optimisticProspect]);
+    setCalendarProspects(prev => [...prev, optimisticProspect]);
 
     try {
-      // createProspect should return the newly created prospect, not an array
       const createdProspect = await createProspect(newProspect);
 
       if (!createdProspect) {
         throw new Error('No response from server');
       }
 
-      // Update the prospects list with the created prospect
-      setProspects(prev => 
+      // Update both data sets
+      const updateProspects = (prev: Prospect[]) =>
         prev.map(p => {
           if (p.id === tempId) {
             return {
               ...createdProspect,
-              saveStatus: undefined, // Remove save status to enable interactions
+              saveStatus: undefined,
               services: createdProspect.services.map(service => ({
                 id: service.id,
                 type: service.type,
@@ -106,19 +142,19 @@ export default function App() {
             };
           }
           return p;
-        })
-      );
+        });
 
-      return createdProspect; // Return for toast.promise
+      setAllProspects(updateProspects);
+      setCalendarProspects(updateProspects);
+
+      return createdProspect;
     } catch (err) {
-      // Keep prospect but mark as error
-      setProspects(prev => 
-        prev.map(p => p.id === tempId ? 
-          { ...p, saveStatus: 'error' } 
-          : p
-        )
-      );
-      throw err; // Let the toast handler catch this
+      const markError = (prev: Prospect[]) =>
+        prev.map(p => p.id === tempId ? { ...p, saveStatus: 'error' } : p);
+
+      setAllProspects(markError);
+      setCalendarProspects(markError);
+      throw err;
     }
   };
 
@@ -133,7 +169,8 @@ export default function App() {
     try {
       setIsLoading(true);
       const updatedProspects = await deleteProspect(prospectId);
-      setProspects(updatedProspects);
+      setAllProspects(updatedProspects);
+      setCalendarProspects(updatedProspects);
       setSelectedProspect(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete prospect');
@@ -146,7 +183,8 @@ export default function App() {
     try {
       setIsLoading(true);
       const updatedProspects = await updateReminder(prospectId, reminderId, completed);
-      setProspects(updatedProspects);
+      setAllProspects(updatedProspects);
+      setCalendarProspects(updatedProspects);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update reminder');
     } finally {
@@ -154,12 +192,10 @@ export default function App() {
     }
   };
 
-  const filteredProspects = React.useMemo(() => {
-    const filtered = prospects.filter(prospect => {
-      if (!prospect || !Array.isArray(prospect.services)) {
-        return false;
-      }
-
+  const filteredCalendarProspects = React.useMemo(() => {
+    return calendarProspects.filter(prospect => {
+      if (!prospect || !Array.isArray(prospect.services)) return false;
+      
       const hasSelectedService = prospect.services.some(service => 
         service && service.type && selectedServices.includes(service.type)
       );
@@ -168,16 +204,21 @@ export default function App() {
       
       return hasSelectedService && hasSelectedStatus && hasSelectedLocation;
     });
+  }, [calendarProspects, selectedServices, selectedStatuses, selectedLocations]);
 
-    if (viewMode !== 'agenda') {
-      return filtered.filter(prospect => {
-        const prospectDate = new Date(prospect.datetime);
-        return !isNaN(prospectDate.getTime());
-      });
-    }
-
-    return filtered;
-  }, [prospects, selectedServices, selectedStatuses, selectedLocations, viewMode]);
+  const filteredAgendaProspects = React.useMemo(() => {
+    return allProspects.filter(prospect => {
+      if (!prospect || !Array.isArray(prospect.services)) return false;
+      
+      const hasSelectedService = prospect.services.some(service => 
+        service && service.type && selectedServices.includes(service.type)
+      );
+      const hasSelectedStatus = selectedStatuses.includes(prospect.status);
+      const hasSelectedLocation = prospect.location ? selectedLocations.includes(prospect.location as Location) : false;
+      
+      return hasSelectedService && hasSelectedStatus && hasSelectedLocation;
+    });
+  }, [allProspects, selectedServices, selectedStatuses, selectedLocations]);
 
   const handlePrevious = () => {
     setCurrentDate((date) =>
@@ -202,16 +243,17 @@ export default function App() {
   };
 
   const totalReminders = React.useMemo(() => {
-    return prospects.reduce((count, prospect) => 
+    return allProspects.reduce((count, prospect) => 
       count + (prospect.reminders?.length || 0), 0
     );
-  }, [prospects]);
+  }, [allProspects]);
 
   const handleUpdateProspect = async (updatedProspect: Prospect) => {
     try {
       setIsLoading(true);
       const updatedProspects = await updateProspect(updatedProspect);
-      setProspects(updatedProspects);
+      setAllProspects(updatedProspects);
+      setCalendarProspects(updatedProspects);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update prospect');
     } finally {
@@ -234,7 +276,7 @@ export default function App() {
           <h2 className="text-red-600 font-medium mb-2">Error</h2>
           <p className="text-gray-600">{error}</p>
           <button
-            onClick={loadProspects}
+            onClick={loadAllData}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Retry
@@ -250,9 +292,9 @@ export default function App() {
         selectedServices={selectedServices}
         onServiceChange={setSelectedServices}
         selectedStatuses={selectedStatuses}
-        onStatusChange={(statuses) => setSelectedStatuses(statuses as Prospect['status'][])}
+        onStatusChange={setSelectedStatuses}
         onLocationChange={setSelectedLocations}
-        prospects={prospects}
+        prospects={allProspects}
       />
       <div className="flex-1 flex flex-col min-w-0">
         <div className="sticky top-0 z-20">
@@ -271,7 +313,7 @@ export default function App() {
         </div>
         {viewMode === 'agenda' ? (
           <AgendaView
-            prospects={filteredProspects}
+            prospects={filteredAgendaProspects}
             onUpdateProspect={handleUpdateProspect}
             onDeleteProspect={handleDeleteProspect}
             onUpdateReminder={handleUpdateReminder}
@@ -280,11 +322,12 @@ export default function App() {
           <CalendarGrid
             currentDate={currentDate}
             viewMode={viewMode}
-            prospects={filteredProspects}
+            prospects={filteredCalendarProspects}
             onAddProspect={handleAddProspectClick}
             onUpdateProspect={handleUpdateProspect}
             onDeleteProspect={handleDeleteProspect}
             onUpdateReminder={handleUpdateReminder}
+            isLoading={isLoadingCalendar}
           />
         )}
         {showAddModal && (
@@ -300,7 +343,7 @@ export default function App() {
       </div>
       
       <ProspectsSidebar
-        prospects={prospects}
+        prospects={allProspects}
         onUpdateProspect={handleUpdateProspect}
         onDeleteProspect={handleDeleteProspect}
         isExpanded={showProspects}
@@ -310,10 +353,8 @@ export default function App() {
       <RemindersPane
         isOpen={showReminders}
         onClose={() => setShowReminders(false)}
-        prospects={prospects}
-        onProspectClick={(prospect) => {
-          setSelectedProspect(prospect);
-        }}
+        prospects={allProspects}
+        onProspectClick={setSelectedProspect}
         onUpdateReminder={handleUpdateReminder}
       />
 
