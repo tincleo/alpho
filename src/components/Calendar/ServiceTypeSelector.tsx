@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, X, Settings } from 'lucide-react';
 import { ServiceType, ServiceDetails } from '../../types/calendar';
+import { toast } from 'react-toastify';
 
 interface ServiceInstance {
   id: string;
@@ -425,7 +426,19 @@ export function ServiceTypeSelector({
 
     if (editingServiceId) {
       // Update existing service
-      await onUpdateDetails(editingServiceId, details);
+      // await onUpdateDetails(editingServiceId, details);
+
+      // Use toast.promise to track the prospect creation
+      toast.promise(onUpdateDetails(editingServiceId, details), {
+        pending: "Updating service...",
+        success: "Service updated 👌",
+        error: {
+          render({ data }) {
+            // When the promise rejects, data will contain the error
+            return `Failed to create prospect: ${data.message}`;
+          },
+        },
+      });
     } else {
       // Add new service instance
       const newService: ServiceInstance = {
@@ -433,7 +446,19 @@ export function ServiceTypeSelector({
         type,
         details,
       };
-      await onToggleService(newService);
+
+      // Use toast.promise to track the prospect creation
+      toast.promise(onToggleService(newService), {
+        pending: "Creating service...",
+        success: "Service created 👌",
+        error: {
+          render({ data }) {
+            // When the promise rejects, data will contain the error
+            return `Failed to create prospect: ${data.message}`;
+          },
+        },
+      });
+      // await onToggleService(newService);
     }
     setLoadingType(null);
 
@@ -457,7 +482,19 @@ export function ServiceTypeSelector({
        );
        if (serviceToDelete) {
          // Trigger the actual deletion in the background
-         await onToggleService(serviceToDelete);
+         //  await onToggleService(serviceToDelete);
+
+         // Use toast.promise to track the prospect creation
+         toast.promise(onToggleService(serviceToDelete), {
+           pending: "Deleting service...",
+           success: "Service deleted 👌",
+           error: {
+             render({ data }) {
+               // When the promise rejects, data will contain the error
+               return `Failed to create prospect: ${data.message}`;
+             },
+           },
+         });
 
          // Close the modal immediately
          setEditingServiceId(null);
