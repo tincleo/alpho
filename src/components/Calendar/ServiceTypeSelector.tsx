@@ -228,10 +228,10 @@ function ServiceOptionsModal({
 
   const getLabel = () => {
     switch (type) {
-      case 'couch': return 'Couch';
-      case 'carpet': return 'Carpet';
-      case 'auto-detailing': return 'Auto';
-      case 'mattress': return 'Mattress';
+      case 'couch': return 'Couch Cleaning';
+      case 'carpet': return 'Carpet Cleaning';
+      case 'auto-detailing': return 'Auto Detailing';
+      case 'mattress': return 'Mattress Cleaning';
       default: return type;
     }
   };
