@@ -3,6 +3,15 @@ import { Plus, X, Settings } from 'lucide-react';
 import { ServiceType, ServiceDetails } from '../../types/calendar';
 import { toast } from 'react-toastify';
 
+// Function to generate UUID v4
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 interface ServiceInstance {
   id: string;
   type: ServiceType;
@@ -463,7 +472,7 @@ export function ServiceTypeSelector({
     } else {
       // Add new service instance
       const newService: ServiceInstance = {
-        id: `${type}_${Date.now()}`,
+        id: generateUUID(),
         type,
         details,
       };
@@ -492,48 +501,49 @@ export function ServiceTypeSelector({
   
 
   const handleDeleteService = async () => {
-   try {
-     setLoadingType("delete");
-     if (editingServiceId) {
-       // Optimistically update local state
-       setLocalServices((prev) =>
-         prev.filter((s) => s.id !== editingServiceId)
-       );
+    try {
+      setLoadingType("delete");
+      if (editingServiceId) {
+        // Find the service to delete
+        const serviceToDelete = selectedServices.find(
+          (s) => s.id === editingServiceId
+        );
+        
+        if (serviceToDelete) {
+          // Optimistically update local state
+          setLocalServices((prev) =>
+            prev.filter((s) => s.id !== editingServiceId)
+          );
 
-       // Find the service to delete
-       const serviceToDelete = selectedServices.find(
-         (s) => s.id === editingServiceId
-       );
-       if (serviceToDelete) {
-       
+          if (!isAddProspectModal) {
+            // Use toast.promise to track the service deletion
+            await toast.promise(onToggleService(serviceToDelete), {
+              pending: "Deleting service...",
+              success: "Service deleted 👌",
+              error: {
+                render({ data }) {
+                  return `Failed to delete service: ${data.message}`;
+                },
+              },
+            });
+          } else {
+            // Trigger the actual deletion and wait for it
+            await onToggleService(serviceToDelete);
+          }
 
-       if(!isAddProspectModal){
-         // Use toast.promise to track the prospect creation
-         toast.promise(onToggleService(serviceToDelete), {
-           pending: "Deleting service...",
-           success: "Service deleted 👌",
-           error: {
-             render({ data }) {
-               // When the promise rejects, data will contain the error
-               return `Failed to create prospect: ${data.message}`;
-             },
-           },
-         });
-       } else {
-         // Trigger the actual deletion in the background
-          await onToggleService(serviceToDelete);
-       }
-
-         // Close the modal immediately
-         setEditingServiceId(null);
-         setSelectedType(null);
-       }
-     }
-     setLoadingType(null);
-   } catch (error) {
-    
-   }
-
+          // Only close the modal after the deletion is complete
+          setEditingServiceId(null);
+          setSelectedType(null);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to delete service:", error);
+      // Revert local state on error
+      setLocalServices(selectedServices);
+      toast.error("Failed to delete service");
+    } finally {
+      setLoadingType(null);
+    }
   };
 
   return (

@@ -290,6 +290,15 @@ export async function updateProspect(prospect: Prospect) {
     const existingServiceIds = new Set(
       existingServices.map((service) => service.id)
     );
+    const newServiceIds = new Set(
+      prospect.services.map((service) => service.id)
+    );
+
+    // Find services to delete (exist in database but not in updated prospect)
+    const servicesToDelete = existingServices.filter(
+      (service) => !newServiceIds.has(service.id)
+    );
+
     const newServicesData = prospect.services.map((service) => {
       const details = service.details[service.type] || {};
       const defaultDetails = {
@@ -318,6 +327,14 @@ export async function updateProspect(prospect: Prospect) {
       (service) => !existingServiceIds.has(service.id)
     );
 
+    // Delete removed services
+    const deletePromise = servicesToDelete.length > 0
+      ? supabase
+          .from("services")
+          .delete()
+          .in("id", servicesToDelete.map((service) => service.id))
+      : Promise.resolve({ error: null });
+
     // Batch update existing services
     const updatePromises = updateServices.map((service) =>
       supabase
@@ -335,13 +352,20 @@ export async function updateProspect(prospect: Prospect) {
         ? supabase.from("services").insert(insertServices)
         : Promise.resolve({ error: null });
 
-    // Execute updates, inserts, and handle reminders concurrently
-    const [updateResult, insertResult, handleRemindersResult] =
-      await Promise.all([
-        ...updatePromises,
-        insertPromise,
-        handleRemindersUpdate(prospect),
-      ]);
+    // Execute updates, inserts, deletes, and handle reminders concurrently
+    const [deleteResult, ...otherResults] = await Promise.all([
+      deletePromise,
+      ...updatePromises,
+      insertPromise,
+      handleRemindersUpdate(prospect),
+    ]);
+
+    if (deleteResult?.error) {
+      console.error("Error deleting services:", deleteResult.error);
+      throw deleteResult.error;
+    }
+
+    const [updateResult, insertResult] = otherResults;
 
     if (updateResult?.error) {
       console.error("Error updating services:", updateResult.error);
