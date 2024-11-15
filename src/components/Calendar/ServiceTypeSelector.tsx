@@ -122,6 +122,19 @@ interface NumberInputProps {
 }
 
 function NumberInput({ value, onChange, min = 1, label }: NumberInputProps) {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = parseInt(e.target.value) || min;
+    if (newValue >= min) {
+      onChange(newValue);
+    }
+  };
+
+  const handleBlur = () => {
+    if (value < min) {
+      onChange(min);
+    }
+  };
+
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -139,7 +152,8 @@ function NumberInput({ value, onChange, min = 1, label }: NumberInputProps) {
           type="number"
           min={min}
           value={value}
-          onChange={(e) => onChange(parseInt(e.target.value) || min)}
+          onChange={handleInputChange}
+          onBlur={handleBlur}
           className="w-16 px-2 py-1 border-t border-b text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
