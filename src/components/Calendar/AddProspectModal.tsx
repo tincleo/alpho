@@ -5,6 +5,7 @@ import { Prospect, ServiceType, ServiceDetails, Location, Priority, Reminder } f
 import { ServiceTypeSelector } from './ServiceTypeSelector';
 import { fetchLocationIdByName, fetchLocations, LocationRow } from '../../lib/api';
 import { toast } from 'react-toastify';
+import Select from 'react-select';
 
 interface AddProspectModalProps {
   onClose: () => void;
@@ -77,23 +78,27 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
     initialType ?? (selectedDate ? 'prospect' : 'follow-up')
   );
   const [showNotes, setShowNotes] = React.useState(!!initialProspect?.notes);
-  const [locationSearch, setLocationSearch] = React.useState(initialProspect?.location || '');
-  const [showLocationDropdown, setShowLocationDropdown] = React.useState(false);
-  const [reminders] = React.useState<Reminder[]>(initialProspect?.reminders || []);
   const [locations, setLocations] = React.useState<Location[]>([]);
 
-   useEffect(() => {
-    
-     fetchLocations().then((data: any) =>
-       setLocations(data.map((location: LocationRow) => location.name))
-     );
-   }, []);
-
-  const filteredLocations = React.useMemo(() => {
-    return locations.filter((location) =>
-      location.toLowerCase().includes(locationSearch.toLowerCase())
+  useEffect(() => {
+    fetchLocations().then((data: any) =>
+      setLocations(data.map((location: LocationRow) => location.name))
     );
-  }, [locationSearch]);
+  }, []);
+
+  const locationOptions = React.useMemo(() => 
+    locations.map(location => ({
+      value: location,
+      label: location
+    }))
+  , [locations]);
+
+  const selectedLocationOption = React.useMemo(() => 
+    formData.location ? {
+      value: formData.location,
+      label: formData.location
+    } : null
+  , [formData.location]);
 
   const handleServiceToggle = (service: ServiceInstance) => {
     if (selectedServices.some(s => s.id === service.id)) {
@@ -189,7 +194,7 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
       isAllDay: formData.isAllDay,
       priority: formData.priority,
       name: formData.name,
-      reminders,
+      reminders: [],
     };
 
     // Close the modal immediately
@@ -311,54 +316,41 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="relative">
+            <div className="space-y-4">
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Location <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={locationSearch}
-                    onChange={(e) => {
-                      setLocationSearch(e.target.value);
-                      setShowLocationDropdown(true);
-                    }}
-                    onFocus={() => setShowLocationDropdown(true)}
-                    placeholder="Select a location..."
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8 ${
-                      !formData.location ? 'border-red-300' : ''
-                    }`}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowLocationDropdown(!showLocationDropdown)}
-                    className="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600"
-                  >
-                    <ChevronDown className="w-4 h-4" />
-                  </button>
-                </div>
-                {showLocationDropdown && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                    {filteredLocations.map((location) => (
-                      <button
-                        key={location}
-                        type="button"
-                        onClick={() => {
-                          setFormData(prev => ({ ...prev, location }));
-                          setLocationSearch(location);
-                          setShowLocationDropdown(false);
-                        }}
-                        className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 ${
-                          location === formData.location ? 'bg-blue-50 text-blue-600' : ''
-                        }`}
-                      >
-                        {location}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <Select
+                  value={selectedLocationOption}
+                  onChange={(option) => {
+                    if (option) {
+                      setFormData(prev => ({ ...prev, location: option.value }));
+                    } else {
+                      setFormData(prev => ({ ...prev, location: '' }));
+                    }
+                  }}
+                  options={locationOptions}
+                  isClearable
+                  isSearchable
+                  placeholder="Select location..."
+                  className="text-sm"
+                  classNamePrefix="react-select"
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      minHeight: '38px',
+                      borderColor: '#e5e7eb',
+                      '&:hover': {
+                        borderColor: '#d1d5db'
+                      }
+                    }),
+                    menu: (base) => ({
+                      ...base,
+                      zIndex: 50
+                    })
+                  }}
+                />
               </div>
 
               <div>
