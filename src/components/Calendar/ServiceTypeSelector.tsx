@@ -35,10 +35,10 @@ interface ServiceCardProps {
 }
 
 const SERVICE_OPTIONS: { type: ServiceType; label: string }[] = [
-  { type: 'couch', label: 'Couch' },
-  { type: 'carpet', label: 'Carpet' },
-  { type: 'auto-detailing', label: 'Auto' },
-  { type: 'mattress', label: 'Mattress' }
+  { type: 'couch', label: 'Couch Cleaning' },
+  { type: 'carpet', label: 'Carpet Cleaning' },
+  { type: 'auto-detailing', label: 'Auto Detailing' },
+  { type: 'mattress', label: 'Mattress Cleaning' }
 ];
 
 function ServiceCard({
@@ -422,6 +422,18 @@ export function ServiceTypeSelector({
   React.useEffect(() => {
     setLocalServices(selectedServices);
   }, [selectedServices]);
+
+  // Handle click outside
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowServiceMenu(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleServiceSelect = (type: ServiceType) => {
     setSelectedType(type);
