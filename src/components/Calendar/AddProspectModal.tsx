@@ -347,9 +347,16 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
                     }),
                     menu: (base) => ({
                       ...base,
-                      zIndex: 50
+                      zIndex: 9999,
+                      position: 'relative'
+                    }),
+                    menuPortal: (base) => ({
+                      ...base,
+                      zIndex: 9999
                     })
                   }}
+                  menuPortalTarget={document.body}
+                  menuPosition="fixed"
                 />
               </div>
 
