@@ -1,6 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Plus, X, Settings } from 'lucide-react';
 import { ServiceType, ServiceDetails } from '../../types/calendar';
+import { toast } from 'react-toastify';
+
+// Function to generate UUID v4
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 
 interface ServiceInstance {
   id: string;
@@ -14,6 +24,7 @@ interface ServiceTypeSelectorProps {
   onToggleService: (service: ServiceInstance) => void;
   onUpdateDetails: (serviceId: string, details: ServiceDetails[string]) => void;
   readOnly?: boolean;
+  isAddProspectModal?: boolean;
 }
 
 interface ServiceCardProps {
@@ -24,10 +35,10 @@ interface ServiceCardProps {
 }
 
 const SERVICE_OPTIONS: { type: ServiceType; label: string }[] = [
-  { type: 'couch', label: 'Couch' },
-  { type: 'carpet', label: 'Carpet' },
-  { type: 'auto-detailing', label: 'Auto' },
-  { type: 'mattress', label: 'Mattress' }
+  { type: 'couch', label: 'Couch Cleaning' },
+  { type: 'carpet', label: 'Carpet Cleaning' },
+  { type: 'auto-detailing', label: 'Auto Detailing' },
+  { type: 'mattress', label: 'Mattress Cleaning' }
 ];
 
 function ServiceCard({
@@ -65,7 +76,10 @@ function ServiceCard({
             .join(' ') 
           : '';
         return `${mode}, ${details.seats} Seats`;
-      
+      case 'mattress': {
+        const size = details.size?.charAt(0).toUpperCase() + details.size?.slice(1);
+        return `${size}, Qty: ${details.quantity}`;
+      }
       default:
         return '';
     }
@@ -105,6 +119,7 @@ interface ServiceOptionsModalProps {
   onSave: (type: ServiceType, details: ServiceDetails[string]) => void;
   onDelete?: () => void;
   isEditing?: boolean;
+  loadingType?: string | null;
 }
 
 // Add this helper component for number inputs
@@ -116,6 +131,19 @@ interface NumberInputProps {
 }
 
 function NumberInput({ value, onChange, min = 1, label }: NumberInputProps) {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = parseInt(e.target.value) || min;
+    if (newValue >= min) {
+      onChange(newValue);
+    }
+  };
+
+  const handleBlur = () => {
+    if (value < min) {
+      onChange(min);
+    }
+  };
+
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -133,7 +161,8 @@ function NumberInput({ value, onChange, min = 1, label }: NumberInputProps) {
           type="number"
           min={min}
           value={value}
-          onChange={(e) => onChange(parseInt(e.target.value) || min)}
+          onChange={handleInputChange}
+          onBlur={handleBlur}
           className="w-16 px-2 py-1 border-t border-b text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
@@ -153,7 +182,8 @@ function ServiceOptionsModal({
   onClose, 
   onSave,
   onDelete,
-  isEditing = false
+  isEditing = false,
+  loadingType
 }: ServiceOptionsModalProps) {
   const [details, setDetails] = React.useState<ServiceDetails[string]>(() => {
     const defaultValues = {
@@ -193,15 +223,15 @@ function ServiceOptionsModal({
     }
 
     onSave(type, details);
-    onClose();
+    // onClose();
   };
 
   const getLabel = () => {
     switch (type) {
-      case 'couch': return 'Couch';
-      case 'carpet': return 'Carpet';
-      case 'auto-detailing': return 'Auto';
-      case 'mattress': return 'Mattress';
+      case 'couch': return 'Couch Cleaning';
+      case 'carpet': return 'Carpet Cleaning';
+      case 'auto-detailing': return 'Auto Detailing';
+      case 'mattress': return 'Mattress Cleaning';
       default: return type;
     }
   };
@@ -320,12 +350,15 @@ function ServiceOptionsModal({
     }
   };
 
+  const isDeleting = loadingType === "delete"
+  const isSaving = loadingType === "saving";
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="text-lg font-medium text-gray-900">
-            {isEditing ? 'Edit' : 'Add'} {getLabel()}
+            {isEditing ? "Edit" : "Add"} {getLabel()}
           </h3>
           <button
             onClick={onClose}
@@ -335,22 +368,21 @@ function ServiceOptionsModal({
           </button>
         </div>
 
-        <div className="p-4">
-          {renderFields()}
-        </div>
+        <div className="p-4">{renderFields()}</div>
 
         <div className="flex justify-between items-center p-4 border-t">
           {isEditing && onDelete ? (
             <button
               onClick={onDelete}
+              disabled={isDeleting}
               className="text-sm text-red-600 hover:text-red-700"
             >
-              Delete
+              {isDeleting ? "Deleting..." : "Delete"}
             </button>
           ) : (
             <div></div>
           )}
-          
+
           <div className="flex gap-2">
             <button
               onClick={onClose}
@@ -362,7 +394,7 @@ function ServiceOptionsModal({
               onClick={handleSave}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
             >
-              {isEditing ? 'Save Changes' : 'Add Service'}
+              {isSaving ? "Saving..." : isEditing ? "Save Changes" : "Add Service"}
             </button>
           </div>
         </div>
@@ -376,12 +408,14 @@ export function ServiceTypeSelector({
   serviceDetails,
   onToggleService,
   onUpdateDetails,
+  isAddProspectModal,
   readOnly
 }: ServiceTypeSelectorProps) {
   const [showServiceMenu, setShowServiceMenu] = React.useState(false);
   const [selectedType, setSelectedType] = React.useState<ServiceType | null>(null);
   const [editingServiceId, setEditingServiceId] = React.useState<string | null>(null);
   const [localServices, setLocalServices] = React.useState(selectedServices);
+  const [loadingType, setLoadingType] = useState<string | null>(null)
   const menuRef = React.useRef<HTMLDivElement>(null);
 
   // Keep local services in sync with prop updates
@@ -389,16 +423,33 @@ export function ServiceTypeSelector({
     setLocalServices(selectedServices);
   }, [selectedServices]);
 
+  // Handle click outside
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowServiceMenu(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleServiceSelect = (type: ServiceType) => {
     setSelectedType(type);
     setShowServiceMenu(false);
   };
 
-  const handleSaveService = (type: ServiceType, details: ServiceDetails[string]) => {
+  const handleSaveService = async (
+    type: ServiceType,
+    details: ServiceDetails[string]
+  ) => {
+    setLoadingType("saving");
+
     // Check if there's already a service with identical properties
-    const isDuplicate = selectedServices.some(service => {
+    const isDuplicate = selectedServices.some((service) => {
       if (service.type !== type) return false;
-      
+
       // Compare all properties of the details object
       const existingDetails = serviceDetails[service.id];
       return JSON.stringify(existingDetails) === JSON.stringify(details);
@@ -408,41 +459,102 @@ export function ServiceTypeSelector({
       // Just close the modal if it's a duplicate
       setSelectedType(null);
       setEditingServiceId(null);
+      setLoadingType(null);
+
       return;
     }
 
     if (editingServiceId) {
-      // Update existing service
-      onUpdateDetails(editingServiceId, details);
+      if (!isAddProspectModal) {
+        // Use toast.promise to track the prospect creation
+        toast.promise(onUpdateDetails(editingServiceId, details), {
+          pending: "Updating service...",
+          success: "Service updated 👌",
+          error: {
+            render({ data }) {
+              // When the promise rejects, data will contain the error
+              return `Failed to create prospect: ${data.message}`;
+            },
+          },
+        });
+      } else {
+        // Update existing service
+        await onUpdateDetails(editingServiceId, details);
+      }
     } else {
       // Add new service instance
       const newService: ServiceInstance = {
-        id: `${type}_${Date.now()}`,
+        id: generateUUID(),
         type,
-        details
+        details,
       };
-      onToggleService(newService);
+
+      if (!isAddProspectModal) {
+        // Use toast.promise to track the prospect creation
+        toast.promise(onToggleService(newService), {
+          pending: "Creating service...",
+          success: "Service created 👌",
+          error: {
+            render({ data }) {
+              // When the promise rejects, data will contain the error
+              return `Failed to create prospect: ${data.message}`;
+            },
+          },
+        });
+      } else {
+        await onToggleService(newService);
+      }
     }
+    setLoadingType(null);
 
     setSelectedType(null);
     setEditingServiceId(null);
   };
+  
 
-  const handleDeleteService = () => {
-    if (editingServiceId) {
-      // Optimistically update local state
-      setLocalServices(prev => prev.filter(s => s.id !== editingServiceId));
-      
-      // Find the service to delete
-      const serviceToDelete = selectedServices.find(s => s.id === editingServiceId);
-      if (serviceToDelete) {
-        // Close the modal immediately
-        setEditingServiceId(null);
-        setSelectedType(null);
+  const handleDeleteService = async () => {
+    try {
+      setLoadingType("delete");
+      if (editingServiceId) {
+        // Find the service to delete
+        const serviceToDelete = selectedServices.find(
+          (s) => s.id === editingServiceId
+        );
         
-        // Trigger the actual deletion in the background
-        onToggleService(serviceToDelete);
+        if (serviceToDelete) {
+          // Optimistically update local state
+          setLocalServices((prev) =>
+            prev.filter((s) => s.id !== editingServiceId)
+          );
+
+          if (!isAddProspectModal) {
+            // Use toast.promise to track the service deletion
+            await toast.promise(onToggleService(serviceToDelete), {
+              pending: "Deleting service...",
+              success: "Service deleted 👌",
+              error: {
+                render({ data }) {
+                  return `Failed to delete service: ${data.message}`;
+                },
+              },
+            });
+          } else {
+            // Trigger the actual deletion and wait for it
+            await onToggleService(serviceToDelete);
+          }
+
+          // Only close the modal after the deletion is complete
+          setEditingServiceId(null);
+          setSelectedType(null);
+        }
       }
+    } catch (error) {
+      console.error("Failed to delete service:", error);
+      // Revert local state on error
+      setLocalServices(selectedServices);
+      toast.error("Failed to delete service");
+    } finally {
+      setLoadingType(null);
     }
   };
 
@@ -505,6 +617,7 @@ export function ServiceTypeSelector({
             setSelectedType(null);
             setEditingServiceId(null);
           }}
+          loadingType={loadingType}
           onSave={handleSaveService}
           onDelete={editingServiceId ? handleDeleteService : undefined}
           isEditing={!!editingServiceId}

@@ -129,61 +129,84 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
     }
   };
 
-  const handleServiceToggle = async (service: ServiceInstance) => {
-    try {
-      // Optimistically update local state
-      const updatedServices = currentProspect.services.some(s => s.id === service.id)
-        ? localServices.filter(s => s.id !== service.id) // Remove service
-        : [...localServices, {  // Add service
-            id: service.id,
-            type: service.type,
-            details: { [service.type]: service.details }
-          }];
-      
-      setLocalServices(updatedServices);
+  const handleServiceToggle = async (
+    service: ServiceInstance
+  ): Promise<void> => {
+    return new Promise(async (resolve) => {
+      // Perform synchronous updates
+      try {
+        // Optimistically update local state
+        const updatedServices = currentProspect.services.some(
+          (s) => s.id === service.id
+        )
+          ? localServices.filter((s) => s.id !== service.id) // Remove service
+          : [
+              ...localServices,
+              {
+                // Add service
+                id: service.id,
+                type: service.type,
+                details: { [service.type]: service.details },
+              },
+            ];
 
-      // Update in background
-      const updatedProspect = {
-        ...currentProspect,
-        services: updatedServices
-      };
+        setLocalServices(updatedServices);
 
-      await onEdit(updatedProspect);
-      setCurrentProspect(updatedProspect);
-    } catch (error) {
-      // Revert on error
-      setLocalServices(currentProspect.services);
-      setError('Failed to update services');
-      console.error('Failed to update services:', error);
-    }
+        // Update in background
+        const updatedProspect = {
+          ...currentProspect,
+          services: updatedServices,
+        };
+
+        await onEdit(updatedProspect);
+        setCurrentProspect(updatedProspect);
+      } catch (error) {
+        // Revert on error
+        setLocalServices(currentProspect.services);
+        setError("Failed to update services");
+        console.error("Failed to update services:", error);
+      }
+      resolve();
+
+    });
+
   };
 
-  const handleServiceDetailsUpdate = async (serviceId: string, details: ServiceDetails[string]) => {
-    try {
-      // Optimistically update local state
-      const updatedServices = localServices.map(service => 
-        service.id === serviceId ? {
-          ...service,
-          details: { [service.type]: details }
-        } : service
-      );
-      
-      setLocalServices(updatedServices);
 
-      // Update in background
-      const updatedProspect = {
-        ...currentProspect,
-        services: updatedServices
-      };
+  const handleServiceDetailsUpdate = async (
+    serviceId: string,
+    details: ServiceDetails[string]
+  ): Promise<void> => {
+    return new Promise(async (resolve) => {
+      try {
+        // Optimistically update local state
+        const updatedServices = localServices.map((service) =>
+          service.id === serviceId
+            ? {
+                ...service,
+                details: { [service.type]: details },
+              }
+            : service
+        );
 
-      await onEdit(updatedProspect);
-      setCurrentProspect(updatedProspect);
-    } catch (error) {
-      // Revert on error
-      setLocalServices(currentProspect.services);
-      setError('Failed to update service details');
-      console.error('Failed to update service details:', error);
-    }
+        setLocalServices(updatedServices);
+
+        // Update in background
+        const updatedProspect = {
+          ...currentProspect,
+          services: updatedServices,
+        };
+
+        await onEdit(updatedProspect);
+        setCurrentProspect(updatedProspect);
+      } catch (error) {
+        // Revert on error
+        setLocalServices(currentProspect.services);
+        setError("Failed to update service details");
+        console.error("Failed to update service details:", error);
+      }
+      resolve();
+    });
   };
 
   const handleDeleteReminder = async (reminderId: string) => {
@@ -277,32 +300,47 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-        {/* Header - Fixed */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <div className="space-y-1">
-            <h2 className="text-xl font-bold text-gray-900">
-              Prospect Details
+      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-3 border-b">
+          <div className="flex items-center gap-2">
+            <User className="w-5 h-5 text-gray-400" />
+            <h2 className="text-lg font-semibold text-gray-900">
+              {currentProspect.name || 'Prospect Details'}
             </h2>
-            {currentProspect.name && (
-              <div className="flex items-center gap-2 text-gray-600">
-                <User className="w-4 h-4" />
-                <span>{currentProspect.name}</span>
-              </div>
-            )}
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            disabled={isLoading}
+            className="text-gray-400 hover:text-gray-500"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-4">
+            {/* Status and Priority */}
+            <div className="flex flex-wrap gap-2">
+              <span
+                className={`px-2.5 py-1 rounded-full text-sm ${
+                  statusColors[currentProspect.status]
+                }`}
+              >
+                {currentProspect.status.charAt(0).toUpperCase() +
+                  currentProspect.status.slice(1)}
+              </span>
+              <span
+                className={`px-2.5 py-1 rounded-full text-sm ${
+                  priorityColors[currentProspect.priority]
+                }`}
+              >
+                <div className="flex items-center gap-1">
+                  <Flag className="w-3 h-3" />
+                  {currentProspect.priority.charAt(0).toUpperCase() +
+                    currentProspect.priority.slice(1)}
+                </div>
+              </span>
+            </div>
+
             {/* Reminders */}
             <RemindersAccordion
               reminders={currentProspect.reminders}
@@ -337,49 +375,17 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
               </div>
             </div>
 
-            {/* Status and Priority */}
-            <div className="flex flex-wrap gap-2">
-              <span
-                className={`px-2.5 py-1 rounded-full text-sm ${
-                  statusColors[currentProspect.status]
-                }`}
-              >
-                {currentProspect.status.charAt(0).toUpperCase() +
-                  currentProspect.status.slice(1)}
-              </span>
-              <span
-                className={`px-2.5 py-1 rounded-full text-sm ${
-                  priorityColors[currentProspect.priority]
-                }`}
-              >
-                <div className="flex items-center gap-1">
-                  <Flag className="w-3 h-3" />
-                  {currentProspect.priority.charAt(0).toUpperCase() +
-                    currentProspect.priority.slice(1)}{" "}
-                  Priority
-                </div>
-              </span>
-              {currentProspect.isAllDay && (
-                <span className="px-2.5 py-1 rounded-full text-sm bg-purple-50 text-purple-800">
-                  All day
-                </span>
-              )}
-            </div>
-
             {/* Date and Time */}
             {currentProspect.datetime && (
-              <div className="flex items-center gap-2 text-gray-600">
+              <div className="flex items-center text-gray-600">
                 <Calendar className="w-4 h-4" />
-                <span>
-                  {format(
-                    new Date(currentProspect.datetime),
-                    "EEEE, MMMM d, yyyy"
-                  )}
+                <span className="ml-2">
+                  {format(new Date(currentProspect.datetime), "d MMM yyyy")}
                 </span>
-                {!currentProspect.isAllDay && currentProspect.datetime && (
+                {!currentProspect.isAllDay && (
                   <>
                     <Clock className="w-4 h-4 ml-2" />
-                    <span>
+                    <span className="ml-1">
                       {format(new Date(currentProspect.datetime), "HH:mm")}
                     </span>
                   </>
@@ -425,13 +431,16 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
 
               {(currentProspect.location || currentProspect.address) && (
                 <div className="flex items-start gap-2 text-gray-600">
-                  <MapPin className="w-4 h-4 mt-1" />
-                  <div>
+                  <MapPin className="w-4 h-4 mt-0.5" />
+                  <div className="flex items-center gap-1">
                     {currentProspect.location && (
-                      <div>{currentProspect.location}</div>
+                      <span>{currentProspect.location}</span>
+                    )}
+                    {currentProspect.location && currentProspect.address && (
+                      <span className="text-gray-400">,</span>
                     )}
                     {currentProspect.address && (
-                      <div className="text-sm">{currentProspect.address}</div>
+                      <span className="text-gray-500">{currentProspect.address}</span>
                     )}
                   </div>
                 </div>
@@ -450,7 +459,7 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
         </div>
 
         {/* Footer - Fixed */}
-        <div className="flex justify-end gap-2 p-6 border-t">
+        <div className="flex justify-end gap-2 py-3 px-6 border-t">
           <div className="relative">
             <button
               onClick={() => setShowDeleteConfirm(true)}
