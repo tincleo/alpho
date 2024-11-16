@@ -90,20 +90,91 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
   };
 
   const handleRemindersChange = async (updatedReminders: Reminder[]) => {
-    setReminders(updatedReminders);
-
     try {
       setIsLoading(true);
-      await onEdit({
-        ...prospect,
+      
+      // Update the prospect with new reminders
+      const updatedProspect = {
+        ...currentProspect,
         reminders: updatedReminders
-      });
+      };
+      
+      await onEdit(updatedProspect);
+      
+      // Update local state after successful save
+      setCurrentProspect(updatedProspect);
+      setReminders(updatedReminders);
     } catch (err: unknown) {
-      setReminders(prospect.reminders || []);
+      setReminders(currentProspect.reminders || []);
       console.error('Failed to update reminders:', err);
       setError(`Failed to update reminders: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAddReminder = async (newReminder: Reminder) => {
+    try {
+      setIsLoading(true);
+      
+      // Add the new reminder to the current list
+      const updatedReminders = [...reminders, newReminder].sort(
+        (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
+      );
+      
+      // Update the prospect with the new reminder
+      const updatedProspect = {
+        ...currentProspect,
+        reminders: updatedReminders
+      };
+      
+      await onEdit(updatedProspect);
+      
+      // Update local state after successful save
+      setCurrentProspect(updatedProspect);
+      setReminders(updatedReminders);
+    } catch (err: unknown) {
+      console.error('Failed to add reminder:', err);
+      setError(`Failed to add reminder: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      // Revert local state
+      setReminders(currentProspect.reminders || []);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdateReminder = async (prospectId: string, reminderId: string, completed: boolean) => {
+    try {
+      // If it's a temporary reminder, we need to save it first
+      if (reminderId.includes('temp_')) {
+        // Find the reminder
+        const reminder = reminders.find(r => r.id === reminderId);
+        if (!reminder) throw new Error('Reminder not found');
+        
+        // Update the reminder list with the completion status
+        const updatedReminders = reminders.map(r =>
+          r.id === reminderId ? { ...r, completed } : r
+        );
+        
+        // Save all changes
+        await handleRemindersChange(updatedReminders);
+      } else {
+        // For existing reminders, just update the completion status
+        await onUpdateReminder(prospectId, reminderId, completed);
+        
+        // Update local state after successful save
+        setReminders(prev => prev.map(r =>
+          r.id === reminderId ? { ...r, completed } : r
+        ));
+        setCurrentProspect(prev => ({
+          ...prev,
+          reminders: prev.reminders.map(r =>
+            r.id === reminderId ? { ...r, completed } : r
+          )
+        }));
+      }
+    } catch (error) {
+      throw error; // Let RemindersAccordion handle the error
     }
   };
 
@@ -235,40 +306,6 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
     }
   };
 
-  const handleAddReminder = async (newReminder: Omit<Reminder, 'id' | 'prospect_id' | 'created_at' | 'updated_at'>) => {
-    try {
-      setIsLoading(true);
-      
-      // Create a temporary reminder object with a temp ID
-      const tempReminder: Reminder = {
-        id: `temp_${Date.now()}`,
-        prospect_id: prospect.id,
-        datetime: newReminder.datetime,
-        note: newReminder.note,
-        completed: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      // Update local state first (optimistic update)
-      const updatedProspect = {
-        ...currentProspect,
-        reminders: [...currentProspect.reminders, tempReminder]
-      };
-      setCurrentProspect(updatedProspect);
-
-      // Save to database
-      await onEdit(updatedProspect);
-    } catch (error) {
-      // Revert on error
-      setCurrentProspect(prospect);
-      setError('Failed to add reminder');
-      console.error('Failed to add reminder:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleSave = async () => {
     try {
       setIsLoading(true);
@@ -278,27 +315,6 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
       console.error('Error saving prospect:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleUpdateReminder = async (prospectId: string, reminderId: string, completed: boolean) => {
-    try {
-      await onUpdateReminder(prospectId, reminderId, completed);
-      
-      // Update local state after successful update
-      setReminders(prev => prev.map(r => 
-        r.id === reminderId ? { ...r, completed } : r
-      ));
-      
-      // Update the current prospect state
-      setCurrentProspect(prev => ({
-        ...prev,
-        reminders: prev.reminders.map(r => 
-          r.id === reminderId ? { ...r, completed } : r
-        )
-      }));
-    } catch (error) {
-      throw error; // Let RemindersAccordion handle the error
     }
   };
 

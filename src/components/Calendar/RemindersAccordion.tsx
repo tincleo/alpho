@@ -32,6 +32,7 @@ export function RemindersAccordion({
   const [note, setNote] = React.useState("");
   const [loadingReminders, setLoadingReminders] = React.useState<Record<string, boolean>>({});
   const dateInputRef = React.useRef<HTMLInputElement>(null);
+  const updateQueue = React.useRef<Map<string, Promise<void>>>(new Map());
 
   // Keep local reminders in sync with prop reminders
   React.useEffect(() => {
@@ -86,8 +87,9 @@ export function RemindersAccordion({
     );
 
     if (hasExistingReminder) {
-      alert(
-        "A reminder already exists for this date. Please choose a different date."
+      toast.error(
+        "A reminder already exists for this date. Please choose a different date.",
+        { position: 'bottom-right' }
       );
       return;
     }
@@ -98,6 +100,8 @@ export function RemindersAccordion({
       datetime: selectedDateTime.toISOString(),
       note: note.trim(),
       completed: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
     // Add new reminder and sort
@@ -137,44 +141,53 @@ export function RemindersAccordion({
       );
       setLocalReminders(updatedReminders);
 
-      // For temporary reminders, we need to save them first
-      if (reminder.id.includes("temp_")) {
-        // Update parent component state
-        onChange(updatedReminders);
-        
-        // Show success toast
-        toast.success(
-          newCompleted ? 'Reminder marked as completed' : 'Reminder marked as pending',
-          { position: 'bottom-right' }
-        );
-      } else {
-        // Update in database for existing reminders
-        await onUpdateReminder(prospectId, reminder.id, newCompleted);
+      // Create a new update promise
+      const updatePromise = (async () => {
+        try {
+          // Wait for any previous update for this reminder to complete
+          const previousUpdate = updateQueue.current.get(reminder.id);
+          if (previousUpdate) {
+            await previousUpdate;
+          }
 
-        // Show success toast
-        toast.success(
-          newCompleted ? 'Reminder marked as completed' : 'Reminder marked as pending',
-          { position: 'bottom-right' }
-        );
-      }
+          // Update in database through parent component
+          await onUpdateReminder(prospectId, reminder.id, newCompleted);
+
+          // Show success toast
+          toast.success(
+            newCompleted ? 'Reminder marked as completed' : 'Reminder marked as pending',
+            { position: 'bottom-right' }
+          );
+        } catch (error) {
+          // Revert local state on error
+          setLocalReminders((prev) =>
+            prev.map((r) =>
+              r.id === reminder.id ? { ...r, completed: reminder.completed } : r
+            )
+          );
+          console.error("Failed to update reminder:", error);
+          toast.error('Failed to update reminder status', { position: 'bottom-right' });
+          throw error;
+        } finally {
+          // Remove this update from the queue
+          updateQueue.current.delete(reminder.id);
+          // Clear loading state
+          setLoadingReminders(prev => {
+            const newState = { ...prev };
+            delete newState[reminder.id];
+            return newState;
+          });
+        }
+      })();
+
+      // Add the promise to the queue
+      updateQueue.current.set(reminder.id, updatePromise);
+
+      // Wait for this update to complete
+      await updatePromise;
     } catch (error) {
-      // Revert local state on error
-      setLocalReminders((prev) =>
-        prev.map((r) =>
-          r.id === reminder.id ? { ...r, completed: reminder.completed } : r
-        )
-      );
-      console.error("Failed to update reminder:", error);
-      toast.error('Failed to update reminder status', { position: 'bottom-right' });
-    } finally {
-      // Clear loading state after a short delay to ensure the spinner is visible
-      setTimeout(() => {
-        setLoadingReminders(prev => {
-          const newState = { ...prev };
-          delete newState[reminder.id];
-          return newState;
-        });
-      }, 300);
+      // Error is already handled in the inner try-catch
+      console.error("Error in handleComplete:", error);
     }
   };
 
