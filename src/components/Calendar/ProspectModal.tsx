@@ -281,6 +281,27 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
     }
   };
 
+  const handleUpdateReminder = async (prospectId: string, reminderId: string, completed: boolean) => {
+    try {
+      await onUpdateReminder(prospectId, reminderId, completed);
+      
+      // Update local state after successful update
+      setReminders(prev => prev.map(r => 
+        r.id === reminderId ? { ...r, completed } : r
+      ));
+      
+      // Update the current prospect state
+      setCurrentProspect(prev => ({
+        ...prev,
+        reminders: prev.reminders.map(r => 
+          r.id === reminderId ? { ...r, completed } : r
+        )
+      }));
+    } catch (error) {
+      throw error; // Let RemindersAccordion handle the error
+    }
+  };
+
   if (error) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -343,17 +364,21 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
 
             {/* Reminders */}
             <RemindersAccordion
-              reminders={currentProspect.reminders}
+              reminders={reminders}
               prospectId={currentProspect.id}
               handleDeleteReminder={handleDeleteReminder}
               onChange={(updatedReminders) => {
-                setCurrentProspect((prev) => ({
+                setReminders(updatedReminders);
+                setCurrentProspect(prev => ({
                   ...prev,
-                  reminders: updatedReminders,
+                  reminders: updatedReminders
                 }));
               }}
               onAddReminder={handleAddReminder}
-              onUpdateReminder={onUpdateReminder}
+              onUpdateReminder={handleUpdateReminder}
+              onRefresh={async () => {
+                // Refresh prospect data if needed
+              }}
             />
 
             {/* Services - Updated styling */}

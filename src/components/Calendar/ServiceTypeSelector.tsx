@@ -196,6 +196,8 @@ function ServiceOptionsModal({
     return defaultValues[type];
   });
 
+  const [deleteInProgress, setDeleteInProgress] = React.useState(false);
+
   const handleSave = () => {
     switch (type) {
       case 'couch':
@@ -224,6 +226,23 @@ function ServiceOptionsModal({
 
     onSave(type, details);
     // onClose();
+  };
+
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    
+    setDeleteInProgress(true);
+    try {
+      await onDelete();
+      toast.success(`${type.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} Cleaning service removed`, {
+        position: 'bottom-right'
+      });
+      onClose();
+    } catch (error) {
+      toast.error('Failed to remove service', { position: 'bottom-right' });
+    } finally {
+      setDeleteInProgress(false);
+    }
   };
 
   const getLabel = () => {
@@ -350,9 +369,6 @@ function ServiceOptionsModal({
     }
   };
 
-  const isDeleting = loadingType === "delete"
-  const isSaving = loadingType === "saving";
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
@@ -373,11 +389,11 @@ function ServiceOptionsModal({
         <div className="flex justify-between items-center p-4 border-t">
           {isEditing && onDelete ? (
             <button
-              onClick={onDelete}
-              disabled={isDeleting}
+              onClick={handleDelete}
+              disabled={deleteInProgress || loadingType === type}
               className="text-sm text-red-600 hover:text-red-700"
             >
-              {isDeleting ? "Deleting..." : "Delete"}
+              {deleteInProgress ? "Deleting..." : "Delete"}
             </button>
           ) : (
             <div></div>
@@ -394,7 +410,7 @@ function ServiceOptionsModal({
               onClick={handleSave}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
             >
-              {isSaving ? "Saving..." : isEditing ? "Save Changes" : "Add Service"}
+              {loadingType === type ? "Saving..." : isEditing ? "Save Changes" : "Add Service"}
             </button>
           </div>
         </div>
