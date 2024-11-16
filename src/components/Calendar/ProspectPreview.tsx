@@ -92,7 +92,7 @@ export function ProspectPreview({
     return '';
   };
 
-  if (view === 'week') {
+  if (view === 'week' || view === 'month') {
     return (
       <div
         onClick={handleClick}
@@ -115,34 +115,6 @@ export function ProspectPreview({
           <div className="text-[10px] text-gray-500 pl-3 truncate">
             {prospect.location} • {!prospect.isAllDay && format(new Date(prospect.datetime), 'HH:mm')}
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (view === 'month') {
-    return (
-      <div
-        onClick={handleClick}
-        draggable={!prospect.saveStatus}
-        onDragStart={handleDragStart}
-        onDragEnd={onDragEnd}
-        className={getBaseClasses()}
-      >
-        <div className="flex items-center gap-1">
-          {prospect.saveStatus === 'saving' && (
-            <Loader2 className="w-3 h-3 animate-spin text-gray-400" />
-          )}
-          <span className={`w-1.5 h-1.5 rounded-full ${statusColors[prospect.status]}`} />
-          <span className="font-medium truncate flex-1">
-            {SERVICE_TYPES[prospect.services[0].type]}
-            {prospect.services.length > 1 && ` +${prospect.services.length - 1}`}
-          </span>
-          {!prospect.isAllDay && (
-            <span className="text-gray-500 shrink-0">
-              {format(new Date(prospect.datetime), 'HH:mm')}
-            </span>
-          )}
         </div>
       </div>
     );

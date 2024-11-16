@@ -53,6 +53,9 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
       [s.id]: s.details[s.type]
     }), {}) ?? {}
   );
+  const [reminders, setReminders] = React.useState<Reminder[]>(
+    initialProspect?.reminders || []
+  );
   const [formData, setFormData] = React.useState({
     location: prefillData?.location ?? initialProspect?.location ?? '',
     address: prefillData?.address ?? initialProspect?.address ?? '',
@@ -200,7 +203,7 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
       isAllDay: formData.isAllDay,
       priority: formData.priority,
       name: formData.name,
-      reminders: [],
+      reminders: initialProspect ? reminders : [], // Keep existing reminders when editing
     };
 
     // Close the modal immediately
