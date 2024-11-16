@@ -46,6 +46,7 @@ export function DayProspectsModal({ date, prospects, onClose, onEdit, onDelete }
                   prospect={prospect}
                   onClick={() => setSelectedProspect(prospect)}
                   view="agenda"
+                  showReminders={false}
                 />
               ))
             )}

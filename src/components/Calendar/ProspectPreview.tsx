@@ -11,6 +11,7 @@ interface ProspectPreviewProps {
   onDragEnd?: () => void;
   view?: 'week' | 'month' | 'agenda';
   compact?: boolean;
+  showReminders?: boolean;
 }
 
 const SERVICE_TYPES: Record<string, string> = {
@@ -26,7 +27,8 @@ export function ProspectPreview({
   draggable = true,
   onDragStart,
   onDragEnd,
-  view = 'month'
+  view = 'month',
+  showReminders = true
 }: ProspectPreviewProps) {
   const statusColors = {
     pending: 'bg-yellow-500',
@@ -102,7 +104,7 @@ export function ProspectPreview({
         className={getBaseClasses()}
       >
         <div className="flex flex-col gap-0.5 relative">
-          {prospect.reminders.length > 0 && (
+          {showReminders && prospect.reminders.length > 0 && (
             <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] min-w-[16px] h-4 rounded-full flex items-center justify-center px-1">
               {prospect.reminders.length}
             </div>
@@ -135,7 +137,7 @@ export function ProspectPreview({
         className={getBaseClasses()}
       >
         <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3 relative">
-          {prospect.reminders.length > 0 && (
+          {showReminders && prospect.reminders.length > 0 && (
             <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs min-w-[18px] h-5 rounded-full flex items-center justify-center px-1">
               {prospect.reminders.length}
             </div>
