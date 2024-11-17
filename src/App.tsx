@@ -1,4 +1,5 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { addWeeks, addMonths, subWeeks, subMonths, startOfWeek, startOfMonth, endOfWeek, endOfMonth } from 'date-fns';
 import { CalendarHeader } from './components/Calendar/CalendarHeader';
 import { CalendarGrid } from './components/Calendar/CalendarGrid';
@@ -14,6 +15,8 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './styles/toast.css';
 import { v4 as uuidv4 } from 'uuid';
+import Team from './pages/Team';
+import Settings from './pages/Settings';
 
 const LOCATIONS: Location[] = [
   'Bastos', 'Mvan', 'Nsam', 'Mvog-Mbi', 'Essos', 
@@ -338,49 +341,98 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      <Sidebar
-        selectedServices={selectedServices}
-        onServiceChange={setSelectedServices}
-        selectedStatuses={selectedStatuses}
-        onStatusChange={setSelectedStatuses}
-        onLocationChange={setSelectedLocations}
-        prospects={allProspects}
-      />
-      <div className="flex-1 flex flex-col min-w-0">
-        <div className="sticky top-0 z-20">
-          <CalendarHeader
-            currentDate={currentDate}
-            viewMode={viewMode}
-            onPrevious={handlePrevious}
-            onNext={handleNext}
-            onToday={handleToday}
-            onViewModeChange={setViewMode}
-            onAddProspect={() => handleAddProspectClick()}
-            onToggleProspects={() => setShowProspects(!showProspects)}
-            onOpenReminders={() => setShowReminders(true)}
-            remindersCount={totalReminders}
-          />
-        </div>
-        {viewMode === 'agenda' ? (
-          <AgendaView
-            prospects={filteredAgendaProspects}
-            onUpdateProspect={handleUpdateProspect}
-            onDeleteProspect={handleDeleteProspect}
-            onUpdateReminder={handleUpdateReminder}
-          />
-        ) : (
-          <CalendarGrid
-            currentDate={currentDate}
-            viewMode={viewMode}
-            prospects={filteredCalendarProspects}
-            onAddProspect={handleAddProspectClick}
-            onUpdateProspect={handleUpdateProspect}
-            onDeleteProspect={handleDeleteProspect}
-            onUpdateReminder={handleUpdateReminder}
-            isLoading={isLoadingCalendar}
-          />
-        )}
+    <BrowserRouter>
+      <div className="min-h-screen bg-gray-100 flex">
+        <Sidebar
+          selectedServices={selectedServices}
+          onServiceChange={setSelectedServices}
+          selectedStatuses={selectedStatuses}
+          onStatusChange={setSelectedStatuses}
+          onLocationChange={setSelectedLocations}
+          prospects={allProspects}
+          onAddProspect={() => setShowAddModal(true)}
+        />
+
+        <Routes>
+          <Route path="/" element={
+            <>
+              <div className="flex-1 flex flex-col min-w-0">
+                <div className="sticky top-0 z-20">
+                  <CalendarHeader
+                    currentDate={currentDate}
+                    viewMode={viewMode}
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                    onToday={handleToday}
+                    onViewModeChange={setViewMode}
+                    onAddProspect={() => handleAddProspectClick()}
+                    onToggleProspects={() => setShowProspects(!showProspects)}
+                    onOpenReminders={() => setShowReminders(true)}
+                    remindersCount={totalReminders}
+                  />
+                </div>
+                {viewMode === 'agenda' ? (
+                  <AgendaView
+                    prospects={filteredAgendaProspects}
+                    onUpdateProspect={handleUpdateProspect}
+                    onDeleteProspect={handleDeleteProspect}
+                    onUpdateReminder={handleUpdateReminder}
+                  />
+                ) : (
+                  <CalendarGrid
+                    currentDate={currentDate}
+                    viewMode={viewMode}
+                    prospects={filteredCalendarProspects}
+                    onAddProspect={handleAddProspectClick}
+                    onUpdateProspect={handleUpdateProspect}
+                    onDeleteProspect={handleDeleteProspect}
+                    onUpdateReminder={handleUpdateReminder}
+                    isLoading={isLoadingCalendar}
+                  />
+                )}
+              </div>
+            </>
+          } />
+          <Route path="/team" element={
+            <div className="flex-1 flex flex-col min-w-0">
+              <div className="sticky top-0 z-20">
+                <CalendarHeader
+                  currentDate={currentDate}
+                  viewMode={viewMode}
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                  onToday={handleToday}
+                  onViewModeChange={setViewMode}
+                  onAddProspect={() => handleAddProspectClick()}
+                  onToggleProspects={() => setShowProspects(!showProspects)}
+                  onOpenReminders={() => setShowReminders(true)}
+                  remindersCount={totalReminders}
+                />
+              </div>
+              <Team />
+            </div>
+          } />
+          <Route path="/settings" element={
+            <div className="flex-1 flex flex-col min-w-0">
+              <div className="sticky top-0 z-20">
+                <CalendarHeader
+                  currentDate={currentDate}
+                  viewMode={viewMode}
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                  onToday={handleToday}
+                  onViewModeChange={setViewMode}
+                  onAddProspect={() => handleAddProspectClick()}
+                  onToggleProspects={() => setShowProspects(!showProspects)}
+                  onOpenReminders={() => setShowReminders(true)}
+                  remindersCount={totalReminders}
+                />
+              </div>
+              <Settings />
+            </div>
+          } />
+        </Routes>
+
         {showAddModal && (
           <AddProspectModal
             onClose={() => {
@@ -391,54 +443,54 @@ export default function App() {
             selectedDate={selectedDate}
           />
         )}
-      </div>
-      
-      <ProspectsSidebar
-        prospects={allProspects}
-        onUpdateProspect={handleUpdateProspect}
-        onDeleteProspect={handleDeleteProspect}
-        isExpanded={showProspects}
-        onToggle={() => setShowProspects(!showProspects)}
-      />
 
-      <RemindersPane
-        isOpen={showReminders}
-        onClose={() => setShowReminders(false)}
-        prospects={allProspects}
-        onProspectClick={setSelectedProspect}
-        onUpdateReminder={handleUpdateReminder}
-      />
+        <ProspectsSidebar
+          prospects={allProspects}
+          onUpdateProspect={handleUpdateProspect}
+          onDeleteProspect={handleDeleteProspect}
+          isExpanded={showProspects}
+          onToggle={() => setShowProspects(!showProspects)}
+        />
 
-      {selectedProspect && (
-        <ProspectModal
-          prospect={selectedProspect}
-          onClose={() => setSelectedProspect(null)}
-          onEdit={handleUpdateProspect}
-          onDelete={handleDeleteProspect}
+        <RemindersPane
+          isOpen={showReminders}
+          onClose={() => setShowReminders(false)}
+          prospects={allProspects}
+          onProspectClick={setSelectedProspect}
           onUpdateReminder={handleUpdateReminder}
         />
-      )}
 
-      {isLoading && (
-        <div className="fixed bottom-4 right-4 bg-white px-4 py-2 rounded-lg shadow-lg">
-          <div className="text-sm text-gray-600">Saving changes...</div>
-        </div>
-      )}
+        {selectedProspect && (
+          <ProspectModal
+            prospect={selectedProspect}
+            onClose={() => setSelectedProspect(null)}
+            onEdit={handleUpdateProspect}
+            onDelete={handleDeleteProspect}
+            onUpdateReminder={handleUpdateReminder}
+          />
+        )}
 
-      <ToastContainer
-        position="bottom-center"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="dark"
-        className="toast-container"
-        toastClassName="dark-toast"
-      />
-    </div>
+        {isLoading && (
+          <div className="fixed bottom-4 right-4 bg-white px-4 py-2 rounded-lg shadow-lg">
+            <div className="text-sm text-gray-600">Saving changes...</div>
+          </div>
+        )}
+
+        <ToastContainer
+          position="bottom-center"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="dark"
+          className="toast-container"
+          toastClassName="dark-toast"
+        />
+      </div>
+    </BrowserRouter>
   );
 }
