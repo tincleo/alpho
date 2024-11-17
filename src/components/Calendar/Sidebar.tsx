@@ -1,6 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Menu, X, Plus, ChevronDown, ChevronUp, Users, Settings as SettingsIcon } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Search, Menu, X, Plus, ChevronDown, ChevronUp, Users, Settings as SettingsIcon, Home } from 'lucide-react';
 import { ServiceType, Location, Prospect } from '../../types/calendar';
 import { fetchLocations, LocationRow } from '../../lib/api';
 
@@ -45,6 +45,7 @@ export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, o
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
   const [locations, setLocations] = React.useState<Location[]>([]);
+  const location = useLocation();
 
   const serviceCounts = React.useMemo(() => {
     const counts: Record<ServiceType, number> = {
@@ -183,185 +184,244 @@ export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, o
         } ${isExpanded ? 'md:w-64' : 'md:w-16'}`}
       >
         <div className="h-full flex flex-col">
-          <div className="sticky top-0 z-20 p-4 border-b border-gray-200 flex items-center justify-between bg-white">
-            <div className="flex items-center gap-2 overflow-hidden">
-              {isExpanded && (
-                <Link to="/" className="text-xl font-bold text-gray-900 hover:text-gray-700 transition-colors">
-                  Alpha Cleaning
-                </Link>
-              )}
-            </div>
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              {isExpanded ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
-
-          {isExpanded && (
-            <div className="flex-1 overflow-y-auto p-4">
-              {/* New Prospect Button */}
-              <button
-                onClick={onAddProspect}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mb-6"
-              >
-                <Plus className="w-4 h-4" />
-                <span>New Prospect</span>
-              </button>
-
-              {/* Services Section */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-sm font-semibold text-gray-900">Services</h2>
-                  <button
-                    onClick={() => setIsServicesOpen(!isServicesOpen)}
-                    className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    {isServicesOpen ? (
-                      <ChevronUp className="w-4 h-4 text-gray-500" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-gray-500" />
-                    )}
-                  </button>
+          {isExpanded ? (
+            <>
+              <div className="sticky top-0 z-20 p-4 border-b border-gray-200 flex items-center justify-between bg-white">
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <Link to="/" className="text-xl font-bold text-gray-900 hover:text-gray-700 transition-colors">
+                    Alpha Cleaning
+                  </Link>
                 </div>
-                {isServicesOpen && (
-                  <div className="space-y-2">
-                    {Object.entries(SERVICE_TYPES).map(([value, label]) => (
-                      <label key={value} className="flex items-center gap-2 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={selectedServices.includes(value as ServiceType)}
-                          onChange={() => toggleService(value as ServiceType)}
-                          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-700 group-hover:text-gray-900 flex-1">
-                          {label}
-                        </span>
-                        <span className="text-xs text-gray-500 tabular-nums">
-                          [{getServiceCount(value as ServiceType)}]
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                )}
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
-              {/* Status Section */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-sm font-semibold text-gray-900">Status</h2>
-                  <button
-                    onClick={() => setIsStatusOpen(!isStatusOpen)}
-                    className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    {isStatusOpen ? (
-                      <ChevronUp className="w-4 h-4 text-gray-500" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-gray-500" />
-                    )}
-                  </button>
-                </div>
-                {isStatusOpen && (
-                  <div className="space-y-2">
-                    {Object.entries(STATUS_TYPES).map(([value, label]) => (
-                      <label key={value} className="flex items-center gap-2 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={selectedStatuses.includes(value)}
-                          onChange={() => toggleStatus(value)}
-                          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <div className="flex items-center gap-2 flex-1">
-                          <div className={`w-2 h-2 rounded-full ${STATUS_COLORS[value as keyof typeof STATUS_COLORS]}`} />
-                          <span className="text-sm text-gray-700 group-hover:text-gray-900">{label}</span>
-                        </div>
-                        <span className="text-xs text-gray-500 tabular-nums">
-                          [{getStatusCount(value)}]
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                {/* New Prospect Button */}
+                <button
+                  onClick={onAddProspect}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mb-6"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>New Prospect</span>
+                </button>
 
-              {/* Locations Section */}
-              <div>
-                <h2 className="text-sm font-semibold text-gray-900 mb-3">Locations</h2>
-                <div className="relative">
-                  <div className="relative">
-                    <input
-                      ref={searchInputRef}
-                      type="text"
-                      placeholder="Search locations..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onFocus={() => setIsLocationsOpen(true)}
-                      className="w-full px-3 py-2 pl-9 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
-                    <div className="absolute right-3 top-2.5 text-xs text-gray-500">
-                      {selectedLocations.length}/{locations.length}
-                    </div>
-                  </div>
-
-                  {isLocationsOpen && (
-                    <div
-                      ref={dropdownRef}
-                      className="absolute z-10 mt-1 w-full bg-white rounded-lg shadow-lg border border-gray-200 max-h-48 overflow-y-auto"
+                {/* Services Section */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-sm font-semibold text-gray-900">Services</h2>
+                    <button
+                      onClick={() => setIsServicesOpen(!isServicesOpen)}
+                      className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
                     >
-                      <div className="sticky top-0 bg-white border-b border-gray-100 p-2">
-                        <button
-                          onClick={toggleAllLocations}
-                          className="text-sm text-blue-600 hover:text-blue-800"
-                        >
-                          {selectedLocations.length === locations.length ? 'Unselect all' : 'Select all'}
-                        </button>
-                      </div>
-                      {filteredLocations.length === 0 ? (
-                        <div className="p-2 text-sm text-gray-500 text-center">
-                          No locations found
-                        </div>
+                      {isServicesOpen ? (
+                        <ChevronUp className="w-4 h-4 text-gray-500" />
                       ) : (
-                        filteredLocations.map(location => (
-                          <label
-                            key={location}
-                            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedLocations.includes(location)}
-                              onChange={() => toggleLocation(location)}
-                              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="text-sm text-gray-700 flex-1">{location}</span>
-                            <span className="text-xs text-gray-500 tabular-nums">
-                              [{getLocationCount(location)}]
-                            </span>
-                          </label>
-                        ))
+                        <ChevronDown className="w-4 h-4 text-gray-500" />
                       )}
+                    </button>
+                  </div>
+                  {isServicesOpen && (
+                    <div className="space-y-2">
+                      {Object.entries(SERVICE_TYPES).map(([value, label]) => (
+                        <label key={value} className="flex items-center gap-2 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={selectedServices.includes(value as ServiceType)}
+                            onChange={() => toggleService(value as ServiceType)}
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700 group-hover:text-gray-900 flex-1">
+                            {label}
+                          </span>
+                          <span className="text-xs text-gray-500 tabular-nums">
+                            [{getServiceCount(value as ServiceType)}]
+                          </span>
+                        </label>
+                      ))}
                     </div>
                   )}
                 </div>
 
-                {/* Navigation Links */}
-                <div className="mt-6 space-y-2">
-                  <Link
-                    to="/team"
-                    className="flex items-center gap-2 p-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                  >
-                    <Users className="w-4 h-4" />
-                    <span className="text-sm">Team</span>
-                  </Link>
-                  <Link
-                    to="/settings"
-                    className="flex items-center gap-2 p-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                  >
-                    <SettingsIcon className="w-4 h-4" />
-                    <span className="text-sm">Settings</span>
-                  </Link>
+                {/* Status Section */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-sm font-semibold text-gray-900">Status</h2>
+                    <button
+                      onClick={() => setIsStatusOpen(!isStatusOpen)}
+                      className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      {isStatusOpen ? (
+                        <ChevronUp className="w-4 h-4 text-gray-500" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                      )}
+                    </button>
+                  </div>
+                  {isStatusOpen && (
+                    <div className="space-y-2">
+                      {Object.entries(STATUS_TYPES).map(([value, label]) => (
+                        <label key={value} className="flex items-center gap-2 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={selectedStatuses.includes(value)}
+                            onChange={() => toggleStatus(value)}
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <div className="flex items-center gap-2 flex-1">
+                            <div className={`w-2 h-2 rounded-full ${STATUS_COLORS[value as keyof typeof STATUS_COLORS]}`} />
+                            <span className="text-sm text-gray-700 group-hover:text-gray-900">{label}</span>
+                          </div>
+                          <span className="text-xs text-gray-500 tabular-nums">
+                            [{getStatusCount(value)}]
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
+
+                {/* Locations Section */}
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-900 mb-3">Locations</h2>
+                  <div className="relative">
+                    <div className="relative">
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        placeholder="Search locations..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onFocus={() => setIsLocationsOpen(true)}
+                        className="w-full px-3 py-2 pl-9 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                      <div className="absolute right-3 top-2.5 text-xs text-gray-500">
+                        {selectedLocations.length}/{locations.length}
+                      </div>
+                    </div>
+
+                    {isLocationsOpen && (
+                      <div
+                        ref={dropdownRef}
+                        className="absolute z-10 mt-1 w-full bg-white rounded-lg shadow-lg border border-gray-200 max-h-48 overflow-y-auto"
+                      >
+                        <div className="sticky top-0 bg-white border-b border-gray-100 p-2">
+                          <button
+                            onClick={toggleAllLocations}
+                            className="text-sm text-blue-600 hover:text-blue-800"
+                          >
+                            {selectedLocations.length === locations.length ? 'Unselect all' : 'Select all'}
+                          </button>
+                        </div>
+                        {filteredLocations.length === 0 ? (
+                          <div className="p-2 text-sm text-gray-500 text-center">
+                            No locations found
+                          </div>
+                        ) : (
+                          filteredLocations.map(location => (
+                            <label
+                              key={location}
+                              className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedLocations.includes(location)}
+                                onChange={() => toggleLocation(location)}
+                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-700 flex-1">{location}</span>
+                              <span className="text-xs text-gray-500 tabular-nums">
+                                [{getLocationCount(location)}]
+                              </span>
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Navigation Links */}
+                  <div className="mt-6 space-y-2">
+                    <Link
+                      to="/team"
+                      className="flex items-center gap-2 p-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                    >
+                      <Users className="w-4 h-4" />
+                      <span className="text-sm">Team</span>
+                    </Link>
+                    <Link
+                      to="/settings"
+                      className="flex items-center gap-2 p-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                    >
+                      <SettingsIcon className="w-4 h-4" />
+                      <span className="text-sm">Settings</span>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Collapsed Sidebar Content */
+            <div className="flex flex-col items-center py-4 space-y-6">
+              {/* Collapsed Header/Toggle Button */}
+              <button
+                onClick={() => setIsExpanded(true)}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+
+              {/* New Prospect Button */}
+              <button
+                onClick={onAddProspect}
+                className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                title="New Prospect"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+
+              {/* Navigation Icons */}
+              <div className="flex flex-col items-center space-y-4">
+                <Link
+                  to="/"
+                  className={`p-2 rounded-lg transition-colors ${
+                    location.pathname === '/' 
+                      ? 'bg-gray-100 text-blue-600' 
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'
+                  }`}
+                  title="Home"
+                >
+                  <Home className="w-5 h-5" />
+                </Link>
+                
+                <Link
+                  to="/team"
+                  className={`p-2 rounded-lg transition-colors ${
+                    location.pathname === '/team' 
+                      ? 'bg-gray-100 text-blue-600' 
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'
+                  }`}
+                  title="Team"
+                >
+                  <Users className="w-5 h-5" />
+                </Link>
+                
+                <Link
+                  to="/settings"
+                  className={`p-2 rounded-lg transition-colors ${
+                    location.pathname === '/settings' 
+                      ? 'bg-gray-100 text-blue-600' 
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'
+                  }`}
+                  title="Settings"
+                >
+                  <SettingsIcon className="w-5 h-5" />
+                </Link>
               </div>
             </div>
           )}
