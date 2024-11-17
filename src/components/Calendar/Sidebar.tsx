@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Search, Menu, X, Plus, ChevronDown, ChevronUp, Users, Settings as SettingsIcon, Home } from 'lucide-react';
+import { Search, Menu, X, Plus, ChevronDown, ChevronUp, Users, Settings as SettingsIcon, Home, FileText } from 'lucide-react';
 import { ServiceType, Location, Prospect } from '../../types/calendar';
 import { fetchLocations, LocationRow } from '../../lib/api';
 
@@ -348,6 +348,13 @@ export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, o
                   {/* Navigation Links */}
                   <div className="mt-6 space-y-2">
                     <Link
+                      to="/prospects"
+                      className="flex items-center gap-2 p-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span className="text-sm">Prospects</span>
+                    </Link>
+                    <Link
                       to="/team"
                       className="flex items-center gap-2 p-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                     >
@@ -397,6 +404,18 @@ export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, o
                   title="Home"
                 >
                   <Home className="w-5 h-5" />
+                </Link>
+
+                <Link
+                  to="/prospects"
+                  className={`p-2 rounded-lg transition-colors ${
+                    location.pathname === '/prospects' 
+                      ? 'bg-gray-100 text-blue-600' 
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'
+                  }`}
+                  title="Prospects"
+                >
+                  <FileText className="w-5 h-5" />
                 </Link>
                 
                 <Link

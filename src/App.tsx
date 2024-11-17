@@ -17,6 +17,7 @@ import './styles/toast.css';
 import { v4 as uuidv4 } from 'uuid';
 import Team from './pages/Team';
 import Settings from './pages/Settings';
+import Prospects from './pages/Prospects';
 
 const LOCATIONS: Location[] = [
   'Bastos', 'Mvan', 'Nsam', 'Mvog-Mbi', 'Essos', 
@@ -392,6 +393,25 @@ export default function App() {
                 )}
               </div>
             </>
+          } />
+          <Route path="/prospects" element={
+            <div className="flex-1 flex flex-col min-w-0">
+              <div className="sticky top-0 z-20">
+                <CalendarHeader
+                  currentDate={currentDate}
+                  viewMode={viewMode}
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                  onToday={handleToday}
+                  onViewModeChange={setViewMode}
+                  onToggleProspects={() => setShowProspects(!showProspects)}
+                  onOpenReminders={() => setShowReminders(true)}
+                  remindersCount={totalReminders}
+                  prospectsCount={allProspects.length}
+                />
+              </div>
+              <Prospects />
+            </div>
           } />
           <Route path="/team" element={
             <div className="flex-1 flex flex-col min-w-0">
