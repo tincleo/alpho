@@ -368,6 +368,7 @@ export default function App() {
                     onToggleProspects={() => setShowProspects(!showProspects)}
                     onOpenReminders={() => setShowReminders(true)}
                     remindersCount={totalReminders}
+                    prospectsCount={allProspects.length}
                   />
                 </div>
                 {viewMode === 'agenda' ? (
@@ -405,6 +406,7 @@ export default function App() {
                   onToggleProspects={() => setShowProspects(!showProspects)}
                   onOpenReminders={() => setShowReminders(true)}
                   remindersCount={totalReminders}
+                  prospectsCount={allProspects.length}
                 />
               </div>
               <Team />
@@ -423,6 +425,7 @@ export default function App() {
                   onToggleProspects={() => setShowProspects(!showProspects)}
                   onOpenReminders={() => setShowReminders(true)}
                   remindersCount={totalReminders}
+                  prospectsCount={allProspects.length}
                 />
               </div>
               <Settings />
