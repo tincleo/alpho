@@ -365,7 +365,6 @@ export default function App() {
                     onNext={handleNext}
                     onToday={handleToday}
                     onViewModeChange={setViewMode}
-                    onAddProspect={() => handleAddProspectClick()}
                     onToggleProspects={() => setShowProspects(!showProspects)}
                     onOpenReminders={() => setShowReminders(true)}
                     remindersCount={totalReminders}
@@ -403,7 +402,6 @@ export default function App() {
                   onNext={handleNext}
                   onToday={handleToday}
                   onViewModeChange={setViewMode}
-                  onAddProspect={() => handleAddProspectClick()}
                   onToggleProspects={() => setShowProspects(!showProspects)}
                   onOpenReminders={() => setShowReminders(true)}
                   remindersCount={totalReminders}
@@ -422,7 +420,6 @@ export default function App() {
                   onNext={handleNext}
                   onToday={handleToday}
                   onViewModeChange={setViewMode}
-                  onAddProspect={() => handleAddProspectClick()}
                   onToggleProspects={() => setShowProspects(!showProspects)}
                   onOpenReminders={() => setShowReminders(true)}
                   remindersCount={totalReminders}
