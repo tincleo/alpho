@@ -431,24 +431,14 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-3 border-b">
-          <div className="flex items-center gap-2">
-            <User className="w-5 h-5 text-gray-400" />
-            <h2 className="text-lg font-semibold text-gray-900">
-              {currentProspect.name || 'Prospect Details'}
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-500"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-4">
-            {/* Status and Priority */}
-            <div className="flex flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <User className="w-5 h-5 text-gray-400" />
+              <h2 className="text-lg font-semibold text-gray-900">
+                {currentProspect.name || 'Prospect'}
+              </h2>
+            </div>
+            <div className="flex gap-2">
               <span
                 className={`px-2.5 py-1 rounded-full text-sm ${
                   statusColors[currentProspect.status]
@@ -469,7 +459,17 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
                 </div>
               </span>
             </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-500"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-4">
             {/* Reminders */}
             <RemindersAccordion
               reminders={reminders}
@@ -563,9 +563,9 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
               </div>
 
               {(currentProspect.location || currentProspect.address) && (
-                <div className="flex items-start gap-2 text-gray-600">
+                <div className="flex gap-2 text-gray-600">
                   <MapPin className="w-4 h-4 mt-0.5" />
-                  <div className="flex items-center gap-1">
+                  <div>
                     {currentProspect.location && (
                       <span>{currentProspect.location}</span>
                     )}
