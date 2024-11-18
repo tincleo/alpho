@@ -570,10 +570,10 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
                       <span>{currentProspect.location}</span>
                     )}
                     {currentProspect.location && currentProspect.address && (
-                      <span className="text-gray-400">,</span>
+                      <span className="text-gray-600">, </span>
                     )}
                     {currentProspect.address && (
-                      <span className="text-gray-500">{currentProspect.address}</span>
+                      <span className="text-gray-600">{currentProspect.address}</span>
                     )}
                   </div>
                 </div>
