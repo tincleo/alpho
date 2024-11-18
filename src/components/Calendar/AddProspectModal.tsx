@@ -60,16 +60,20 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
     location: prefillData?.location ?? initialProspect?.location ?? '',
     address: prefillData?.address ?? initialProspect?.address ?? '',
     phone: prefillData?.phone ?? initialProspect?.phone ?? '',
-    date: prefillData?.datetime
-      ? format(new Date(prefillData.datetime), 'yyyy-MM-dd')
-      : selectedDate 
-        ? format(selectedDate, 'yyyy-MM-dd')
-        : format(new Date(), 'yyyy-MM-dd'),
-    startTime: prefillData?.datetime
-      ? format(new Date(prefillData.datetime), 'HH:mm')
-      : '09:00',
-    endTime: prefillData?.endTime
-      ? format(new Date(prefillData.endTime), 'HH:mm')
+    date: initialProspect?.datetime
+      ? format(new Date(initialProspect.datetime), 'yyyy-MM-dd')
+      : prefillData?.datetime
+        ? format(new Date(prefillData.datetime), 'yyyy-MM-dd')
+        : selectedDate 
+          ? format(selectedDate, 'yyyy-MM-dd')
+          : format(new Date(), 'yyyy-MM-dd'),
+    startTime: initialProspect?.datetime
+      ? format(new Date(initialProspect.datetime), 'HH:mm')
+      : prefillData?.datetime
+        ? format(new Date(prefillData.datetime), 'HH:mm')
+        : '09:00',
+    endTime: initialProspect?.datetime
+      ? format(addHours(new Date(initialProspect.datetime), 2), 'HH:mm')
       : '11:00',
     notes: prefillData?.notes ?? initialProspect?.notes ?? '',
     status: prefillData?.status ?? initialProspect?.status ?? 'pending',
@@ -141,16 +145,6 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
     }));
   };
 
-  const handleEndTimeChange = (newEndTime: string) => {
-    const endDate = parse(newEndTime, 'HH:mm', new Date());
-    const startDate = addHours(endDate, -2);
-    setFormData(prev => ({
-      ...prev,
-      startTime: format(startDate, 'HH:mm'),
-      endTime: newEndTime
-    }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -164,8 +158,8 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
       return;
     }
 
-    if (formData.status === 'confirmed' && (!formData.startTime || !formData.endTime)) {
-      toast.error('Start and end time are required for confirmed prospects');
+    if (formData.status === 'confirmed' && !formData.startTime) {
+      toast.error('Start time is required for confirmed prospects');
       return;
     }
 
@@ -184,7 +178,6 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
     }));
 
     const startDateTime = parse(formData.startTime, 'HH:mm', new Date(formData.date));
-    const endDateTime = parse(formData.endTime, 'HH:mm', new Date(formData.date));
 
     const location = await fetchLocationIdByName(formData.location);
     const prospect = {
@@ -195,9 +188,8 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
       phone: formData.phone,
       datetime:
         prospectType === "prospect"
-          ? new Date(`${formData.date}T${formData.startTime}`).toISOString()
+          ? startDateTime.toISOString()
           : new Date().toISOString(),
-      end_time: endDateTime.toISOString(),
       notes: formData.notes,
       status: formData.status,
       isAllDay: formData.isAllDay,
@@ -249,9 +241,9 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
-          <form className="space-y-3">
+          <form className="space-y-4 text-sm">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block font-medium text-gray-700 mb-1">
                 Type
               </label>
               <div className="flex gap-4">
@@ -298,82 +290,29 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Prospect Name
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={formData.phone}
-                  onChange={(e) => {
-                    const formatted = formatPhoneNumber(e.target.value);
-                    setFormData((prev) => ({ ...prev, phone: formatted }));
-                  }}
-                  placeholder="699 88 77 66"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Location <span className="text-red-500">*</span>
+                <label className="block font-medium text-gray-700 mb-1">
+                  Location
                 </label>
                 <Select
                   value={selectedLocationOption}
-                  onChange={(option) => {
-                    if (option) {
-                      setFormData(prev => ({ ...prev, location: option.value }));
-                    } else {
-                      setFormData(prev => ({ ...prev, location: '' }));
-                    }
-                  }}
+                  onChange={(option) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      location: option?.value || '',
+                    }))
+                  }
                   options={locationOptions}
-                  isClearable
-                  isSearchable
-                  placeholder="Select location..."
                   className="text-sm"
-                  classNamePrefix="react-select"
-                  styles={{
-                    control: (base) => ({
-                      ...base,
-                      minHeight: '38px',
-                      borderColor: '#e5e7eb',
-                      '&:hover': {
-                        borderColor: '#d1d5db'
-                      }
-                    }),
-                    menu: (base) => ({
-                      ...base,
-                      zIndex: 9999,
-                      position: 'relative'
-                    }),
-                    menuPortal: (base) => ({
-                      ...base,
-                      zIndex: 9999
-                    })
+                  classNames={{
+                    control: () => "!min-h-[38px]",
                   }}
-                  menuPortalTarget={document.body}
-                  menuPosition="fixed"
+                  placeholder="Select location..."
+                  isClearable
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block font-medium text-gray-700 mb-1">
                   Address
                 </label>
                 <input
@@ -382,57 +321,49 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, address: e.target.value }))
                   }
-                  placeholder="Enter precise address"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  placeholder="Enter address..."
                 />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, status: e.target.value }))
-                    }
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Priority
-                  </label>
-                  <select
-                    value={formData.priority}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, priority: e.target.value as Priority }))
-                    }
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    {PRIORITIES.map((priority) => (
-                      <option key={priority} value={priority}>
-                        {priority.charAt(0).toUpperCase() + priority.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date <span className="text-red-500">*</span>
+                <label className="block font-medium text-gray-700 mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  placeholder="Enter name..."
+                />
+              </div>
+
+              <div>
+                <label className="block font-medium text-gray-700 mb-1">
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => {
+                    const formattedValue = formatPhoneNumber(e.target.value);
+                    setFormData((prev) => ({ ...prev, phone: formattedValue }));
+                  }}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  placeholder="Enter phone number..."
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block font-medium text-gray-700 mb-1">
+                  Date
                 </label>
                 <input
                   type="date"
@@ -441,74 +372,95 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, date: e.target.value }))
                   }
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm cursor-pointer"
                 />
               </div>
+              <div>
+                <label className="block font-medium text-gray-700 mb-1">
+                  Start Time
+                </label>
+                <select
+                  value={formData.startTime}
+                  onChange={(e) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      startTime: e.target.value,
+                    }));
+                  }}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                >
+                  {TIME_OPTIONS.map((time) => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-sm font-medium text-gray-700">
-                    All Day
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({ ...prev, isAllDay: !prev.isAllDay }))
-                    }
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      formData.isAllDay ? 'bg-blue-600' : 'bg-gray-200'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        formData.isAllDay ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </div>
+            <div className="flex items-center justify-between">
+              <label className="block font-medium text-gray-700">
+                All Day
+              </label>
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData((prev) => ({ ...prev, isAllDay: !prev.isAllDay }))
+                }
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  formData.isAllDay ? 'bg-blue-600' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    formData.isAllDay ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
 
-                {!formData.isAllDay && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Start Time
-                      </label>
-                      <select
-                        value={formData.startTime}
-                        onChange={handleStartTimeChange}
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        {TIME_OPTIONS.map((time) => (
-                          <option key={time} value={time}>
-                            {time}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      status: e.target.value as any,
+                    }))
+                  }
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        End Time
-                      </label>
-                      <select
-                        value={formData.endTime}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            endTime: e.target.value,
-                          }))
-                        }
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        {TIME_OPTIONS.map((time) => (
-                          <option key={time} value={time}>
-                            {time}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
+              <div>
+                <label className="block font-medium text-gray-700 mb-1">
+                  Priority
+                </label>
+                <select
+                  value={formData.priority}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      priority: e.target.value as any,
+                    }))
+                  }
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                >
+                  {PRIORITIES.map((priority) => (
+                    <option key={priority} value={priority}>
+                      {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -524,7 +476,7 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
                 </button>
               ) : (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block font-medium text-gray-700 mb-1">
                     Notes
                   </label>
                   <textarea
@@ -534,7 +486,7 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
                     }
                     rows={3}
                     placeholder="Additional notes about the prospect"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   />
                 </div>
               )}
