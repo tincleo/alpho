@@ -5,6 +5,8 @@ import { Prospect, Reminder } from '../../types/calendar';
 import { ServiceTypeSelector } from './ServiceTypeSelector';
 import { AddProspectModal } from './AddProspectModal';
 import { RemindersAccordion } from './RemindersAccordion';
+import { realtimeManager } from '../../lib/realtimeManager';
+import { fetchProspectById } from '../../lib/api';
 
 interface ProspectModalProps {
   prospect: Prospect;
@@ -317,6 +319,86 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
       setIsLoading(false);
     }
   };
+
+  // Subscribe to realtime updates for this specific prospect
+  React.useEffect(() => {
+    const channelId = `prospect-${prospect.id}`;
+    let isMounted = true;
+
+    const refreshProspect = async () => {
+      if (!isMounted) return;
+      
+      try {
+        setIsLoading(true);
+        const updatedProspect = await fetchProspectById(prospect.id);
+        
+        if (!isMounted) return;
+        
+        if (updatedProspect) {
+          setCurrentProspect(updatedProspect);
+          setReminders(updatedProspect.reminders || []);
+          setLocalServices(updatedProspect.services || []);
+        } else {
+          // If prospect no longer exists, close the modal
+          onClose();
+        }
+      } catch (error) {
+        console.error('Error refreshing prospect:', error);
+        if (isMounted) {
+          setError('Failed to refresh prospect data');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    // Initial refresh
+    refreshProspect();
+    
+    realtimeManager.subscribe(channelId, {
+      onProspectChange: async (payload) => {
+        if (!isMounted) return;
+        
+        if (payload.eventType === 'DELETE' || !payload.new) {
+          onClose();
+          return;
+        }
+        
+        if (payload.new.id === prospect.id) {
+          await refreshProspect();
+        }
+      },
+      onReminderChange: async (payload) => {
+        if (!isMounted) return;
+        
+        const isRelevant = 
+          (payload.new?.prospect_id === prospect.id) || 
+          (payload.old?.prospect_id === prospect.id);
+          
+        if (isRelevant) {
+          await refreshProspect();
+        }
+      },
+      onServiceChange: async (payload) => {
+        if (!isMounted) return;
+        
+        const isRelevant = 
+          (payload.new?.prospect_id === prospect.id) || 
+          (payload.old?.prospect_id === prospect.id);
+          
+        if (isRelevant) {
+          await refreshProspect();
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      realtimeManager.unsubscribe(channelId);
+    };
+  }, [prospect.id]);
 
   if (error) {
     return (

@@ -130,21 +130,19 @@ export default function App() {
     loadProspects();
 
     // Subscribe to realtime updates
-    realtimeManager.subscribe({
+    realtimeManager.subscribe('calendar-main', {
       onProspectChange: async (payload) => {
-        const { eventType, new: newProspect, old: oldProspect } = payload;
-
         // Optimistically update the UI
         setAllProspects(prevProspects => {
-          switch (eventType) {
+          switch (payload.eventType) {
             case 'INSERT':
-              return [...prevProspects, newProspect];
+              return [...prevProspects, payload.new];
             case 'UPDATE':
               return prevProspects.map(p => 
-                p.id === newProspect.id ? { ...p, ...newProspect } : p
+                p.id === payload.new.id ? { ...p, ...payload.new } : p
               );
             case 'DELETE':
-              return prevProspects.filter(p => p.id !== oldProspect.id);
+              return prevProspects.filter(p => p.id !== payload.old.id);
             default:
               return prevProspects;
           }
@@ -157,7 +155,7 @@ export default function App() {
           setCalendarProspects(prospects);
         }
       },
-      onReminderChange: async (payload) => {
+      onReminderChange: async () => {
         // Fetch the latest data when reminders change
         const prospects = await fetchProspects();
         if (prospects) {
@@ -165,7 +163,7 @@ export default function App() {
           setCalendarProspects(prospects);
         }
       },
-      onServiceChange: async (payload) => {
+      onServiceChange: async () => {
         // Fetch the latest data when services change
         const prospects = await fetchProspects();
         if (prospects) {
@@ -176,7 +174,7 @@ export default function App() {
     });
 
     return () => {
-      realtimeManager.unsubscribe();
+      realtimeManager.unsubscribe('calendar-main');
     };
   }, []);
 

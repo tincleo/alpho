@@ -160,6 +160,57 @@ export async function fetchProspects(startDate?: Date, endDate?: Date) {
   }
 }
 
+// Fetch a single prospect by ID
+export async function fetchProspectById(prospectId: string): Promise<Prospect | null> {
+  try {
+    const { data: prospects, error: prospectsError } = await supabase
+      .from('prospects')
+      .select(`
+        *,
+        services!services_prospect_id_fkey (*),
+        reminders (*)
+      `)
+      .eq('id', prospectId)
+      .single();
+
+    if (prospectsError) throw prospectsError;
+    if (!prospects) return null;
+
+    const location = await fetchLocationById(prospects.location_id);
+    
+    return {
+      id: prospects.id,
+      name: prospects.name ?? "",
+      phone: prospects.phone,
+      location: location?.name ?? "Bastos",
+      location_id: prospects.location_id,
+      address: prospects.address ?? "",
+      datetime: prospects.datetime,
+      status: prospects.status,
+      priority: prospects.priority,
+      isAllDay: prospects.is_all_day,
+      notes: prospects.notes ?? "",
+      services: prospects.services.map((s: any) => ({
+        id: s.id,
+        type: s.type as ServiceType,
+        details: { [s.type]: s.details } as ServiceDetails,
+      })),
+      reminders: prospects.reminders.map((r: any) => ({
+        id: r.id,
+        prospect_id: r.prospect_id,
+        datetime: r.datetime,
+        note: r.note ?? undefined,
+        completed: r.completed,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+      })),
+    };
+  } catch (error) {
+    console.error('Error fetching prospect:', error);
+    throw error;
+  }
+}
+
 // Create a new prospect with services
 export const createProspect = async (prospect: Omit<Prospect, 'id'>): Promise<Prospect> => {
   try {

@@ -1,50 +1,62 @@
-import { RealtimeChannel } from '@supabase/supabase-js';
+import { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { Prospect, Service, Reminder } from '../types/calendar';
+import { Database } from './database.types';
+
+type ProspectRow = Database['public']['Tables']['prospects']['Row'];
+type ServiceRow = Database['public']['Tables']['services']['Row'];
+type ReminderRow = Database['public']['Tables']['reminders']['Row'];
 
 type RealtimeCallback = {
-  onProspectChange?: (payload: { new: any; old: any; eventType: 'INSERT' | 'UPDATE' | 'DELETE' }) => void;
-  onReminderChange?: (payload: { new: any; old: any; eventType: 'INSERT' | 'UPDATE' | 'DELETE' }) => void;
-  onServiceChange?: (payload: { new: any; old: any; eventType: 'INSERT' | 'UPDATE' | 'DELETE' }) => void;
+  onProspectChange?: (payload: RealtimePostgresChangesPayload<{
+    old: ProspectRow | null;
+    new: ProspectRow | null;
+  }>) => void;
+  onReminderChange?: (payload: RealtimePostgresChangesPayload<{
+    old: ReminderRow | null;
+    new: ReminderRow | null;
+  }>) => void;
+  onServiceChange?: (payload: RealtimePostgresChangesPayload<{
+    old: ServiceRow | null;
+    new: ServiceRow | null;
+  }>) => void;
 };
 
 class RealtimeManager {
-  private channel: RealtimeChannel | null = null;
-  private callbacks: RealtimeCallback = {};
+  private channels: Map<string, RealtimeChannel> = new Map();
+  private callbacks: Map<string, RealtimeCallback> = new Map();
 
   constructor() {
-    // Enable realtime for our tables
-    supabase.channel('public:prospects').on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'prospects',
-    }, () => {});
-
-    supabase.channel('public:reminders').on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'reminders',
-    }, () => {});
-
-    supabase.channel('public:services').on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'services',
-    }, () => {});
+    this.enableRealtimeForTable('prospects');
+    this.enableRealtimeForTable('reminders');
+    this.enableRealtimeForTable('services');
   }
 
-  subscribe(callbacks: RealtimeCallback) {
-    this.callbacks = callbacks;
+  private enableRealtimeForTable(table: string) {
+    supabase.channel(`public:${table}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: table,
+      }, () => {})
+      .subscribe((status) => {
+        console.log(`Realtime status for ${table}:`, status);
+      });
+  }
 
-    // Create a new channel for all our subscriptions
-    this.channel = supabase.channel('calendar-updates')
+  subscribe(channelId: string, callbacks: RealtimeCallback) {
+    this.unsubscribe(channelId); // Clean up any existing subscription
+    this.callbacks.set(channelId, callbacks);
+
+    const channel = supabase.channel(`calendar-updates-${channelId}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'prospects',
       }, (payload) => {
-        if (this.callbacks.onProspectChange) {
-          this.callbacks.onProspectChange(payload);
+        const callback = this.callbacks.get(channelId);
+        if (callback?.onProspectChange) {
+          callback.onProspectChange(payload);
         }
       })
       .on('postgres_changes', {
@@ -52,8 +64,9 @@ class RealtimeManager {
         schema: 'public',
         table: 'reminders',
       }, (payload) => {
-        if (this.callbacks.onReminderChange) {
-          this.callbacks.onReminderChange(payload);
+        const callback = this.callbacks.get(channelId);
+        if (callback?.onReminderChange) {
+          callback.onReminderChange(payload);
         }
       })
       .on('postgres_changes', {
@@ -61,20 +74,26 @@ class RealtimeManager {
         schema: 'public',
         table: 'services',
       }, (payload) => {
-        if (this.callbacks.onServiceChange) {
-          this.callbacks.onServiceChange(payload);
+        const callback = this.callbacks.get(channelId);
+        if (callback?.onServiceChange) {
+          callback.onServiceChange(payload);
         }
       });
 
-    this.channel.subscribe();
+    channel.subscribe((status) => {
+      console.log(`Realtime status for channel ${channelId}:`, status);
+    });
+    
+    this.channels.set(channelId, channel);
   }
 
-  unsubscribe() {
-    if (this.channel) {
-      this.channel.unsubscribe();
-      this.channel = null;
+  unsubscribe(channelId: string) {
+    const channel = this.channels.get(channelId);
+    if (channel) {
+      channel.unsubscribe();
+      this.channels.delete(channelId);
     }
-    this.callbacks = {};
+    this.callbacks.delete(channelId);
   }
 }
 
