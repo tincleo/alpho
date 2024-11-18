@@ -92,17 +92,23 @@ export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, o
   }, []);
 
   const getServiceCount = (service: ServiceType) => {
-    return prospects.filter(prospect => 
-      prospect.services.some(s => s.type === service)
-    ).length;
+    if (!prospects) return 0;
+    return prospects.filter(prospect => {
+      if (!prospect || !prospect.services || !Array.isArray(prospect.services)) return false;
+      return prospect.services.some(s => s && s.type === service);
+    }).length;
   };
 
   const getStatusCount = (status: string) => {
-    return prospects.filter(prospect => prospect.status === status).length;
+    if (!prospects) return 0;
+    return prospects.filter(prospect => prospect && prospect.status === status).length;
   };
 
   const getLocationCount = (location: Location) => {
-    return prospects.filter(prospect => prospect.location === location).length;
+    if (!prospects) return 0;
+    return prospects.filter(prospect => 
+      prospect && prospect.location && prospect.location === location
+    ).length;
   };
 
   const toggleService = (service: ServiceType) => {
