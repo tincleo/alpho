@@ -39,20 +39,51 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
   const [showPhoneMenu, setShowPhoneMenu] = React.useState(false);
   const phoneMenuRef = React.useRef<HTMLDivElement>(null);
   const [localServices, setLocalServices] = React.useState(prospect.services);
+  const [hasChanges, setHasChanges] = React.useState(false);
+
+  // Function to check if two objects are deeply equal
+  const isEqual = (obj1: any, obj2: any): boolean => {
+    if (obj1 === obj2) return true;
+    if (typeof obj1 !== 'object' || typeof obj2 !== 'object') return obj1 === obj2;
+    if (obj1 === null || obj2 === null) return obj1 === obj2;
+    if (Array.isArray(obj1) !== Array.isArray(obj2)) return false;
+    
+    const keys1 = Object.keys(obj1);
+    const keys2 = Object.keys(obj2);
+    
+    if (keys1.length !== keys2.length) return false;
+    
+    return keys1.every(key => isEqual(obj1[key], obj2[key]));
+  };
+
+  // Function to check if prospect has changes
+  const checkForChanges = (updatedProspect: Prospect) => {
+    const hasChanged = !isEqual(updatedProspect, prospect);
+    setHasChanges(hasChanged);
+    return hasChanged;
+  };
 
   const handleEdit = async (updatedProspect: Omit<Prospect, 'id'>) => {
     try {
-      setIsLoading(true);
       const fullProspect = { 
         ...updatedProspect, 
         id: currentProspect.id,
-      };
-      await onEdit(fullProspect as Prospect);
+      } as Prospect;
+
+      // Only proceed if there are actual changes
+      if (!checkForChanges(fullProspect)) {
+        setShowEditModal(false);
+        return;
+      }
+
+      setIsLoading(true);
+      await onEdit(fullProspect);
       
       // Update the current prospect state with the new data
-      setCurrentProspect(fullProspect as Prospect);
+      setCurrentProspect(fullProspect);
       setReminders(fullProspect.reminders);
       setShowEditModal(false);
+      setHasChanges(false);
     } catch {
       setError('Failed to update prospect');
     } finally {
@@ -65,6 +96,7 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
     setCurrentProspect(prospect);
     setReminders(prospect.reminders || []);
     setLocalServices(prospect.services);
+    setHasChanges(false);
   }, [prospect]);
 
   React.useEffect(() => {
@@ -221,7 +253,6 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
     service: ServiceInstance
   ): Promise<void> => {
     return new Promise(async (resolve) => {
-      // Perform synchronous updates
       try {
         // Optimistically update local state
         const updatedServices = currentProspect.services.some(
@@ -238,16 +269,21 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
               },
             ];
 
-        setLocalServices(updatedServices);
-
-        // Update in background
         const updatedProspect = {
           ...currentProspect,
           services: updatedServices,
         };
 
+        // Only proceed if there are actual changes
+        if (!checkForChanges(updatedProspect)) {
+          resolve();
+          return;
+        }
+
+        setLocalServices(updatedServices);
         await onEdit(updatedProspect);
         setCurrentProspect(updatedProspect);
+        setHasChanges(false);
       } catch (error) {
         // Revert on error
         setLocalServices(currentProspect.services);
@@ -255,11 +291,8 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
         console.error("Failed to update services:", error);
       }
       resolve();
-
     });
-
   };
-
 
   const handleServiceDetailsUpdate = async (
     serviceId: string,
@@ -277,16 +310,21 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
             : service
         );
 
-        setLocalServices(updatedServices);
-
-        // Update in background
         const updatedProspect = {
           ...currentProspect,
           services: updatedServices,
         };
 
+        // Only proceed if there are actual changes
+        if (!checkForChanges(updatedProspect)) {
+          resolve();
+          return;
+        }
+
+        setLocalServices(updatedServices);
         await onEdit(updatedProspect);
         setCurrentProspect(updatedProspect);
+        setHasChanges(false);
       } catch (error) {
         // Revert on error
         setLocalServices(currentProspect.services);
@@ -325,8 +363,15 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
 
   const handleSave = async () => {
     try {
+      // Only proceed if there are actual changes
+      if (!hasChanges) {
+        onClose();
+        return;
+      }
+
       setIsLoading(true);
       await onEdit(currentProspect);
+      setHasChanges(false);
       onClose();
     } catch (error) {
       console.error('Error saving prospect:', error);
