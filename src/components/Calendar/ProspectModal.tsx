@@ -95,6 +95,13 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
     try {
       setIsLoading(true);
       
+      // Optimistically update local state
+      setReminders(updatedReminders);
+      setCurrentProspect(prev => ({
+        ...prev,
+        reminders: updatedReminders
+      }));
+      
       // Update the prospect with new reminders
       const updatedProspect = {
         ...currentProspect,
@@ -102,12 +109,13 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
       };
       
       await onEdit(updatedProspect);
-      
-      // Update local state after successful save
-      setCurrentProspect(updatedProspect);
-      setReminders(updatedReminders);
     } catch (err: unknown) {
+      // Revert on error
       setReminders(currentProspect.reminders || []);
+      setCurrentProspect(prev => ({
+        ...prev,
+        reminders: currentProspect.reminders || []
+      }));
       console.error('Failed to update reminders:', err);
       setError(`Failed to update reminders: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
@@ -124,6 +132,13 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
         (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
       );
       
+      // Optimistically update local state
+      setReminders(updatedReminders);
+      setCurrentProspect(prev => ({
+        ...prev,
+        reminders: updatedReminders
+      }));
+      
       // Update the prospect with the new reminder
       const updatedProspect = {
         ...currentProspect,
@@ -131,15 +146,15 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
       };
       
       await onEdit(updatedProspect);
-      
-      // Update local state after successful save
-      setCurrentProspect(updatedProspect);
-      setReminders(updatedReminders);
     } catch (err: unknown) {
+      // Revert on error
+      setReminders(currentProspect.reminders || []);
+      setCurrentProspect(prev => ({
+        ...prev,
+        reminders: currentProspect.reminders || []
+      }));
       console.error('Failed to add reminder:', err);
       setError(`Failed to add reminder: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      // Revert local state
-      setReminders(currentProspect.reminders || []);
     } finally {
       setIsLoading(false);
     }
@@ -329,7 +344,6 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
       if (!isMounted) return;
       
       try {
-        setIsLoading(true);
         const updatedProspect = await fetchProspectById(prospect.id);
         
         if (!isMounted) return;
@@ -346,10 +360,6 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
         console.error('Error refreshing prospect:', error);
         if (isMounted) {
           setError('Failed to refresh prospect data');
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
         }
       }
     };
