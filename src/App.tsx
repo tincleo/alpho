@@ -18,6 +18,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Team from './pages/Team';
 import Settings from './pages/Settings';
 import Prospects from './pages/Prospects';
+import { realtimeManager } from './lib/realtimeManager';
 
 const LOCATIONS: Location[] = [
   'Bastos', 'Mvan', 'Nsam', 'Mvog-Mbi', 'Essos', 
@@ -116,6 +117,68 @@ export default function App() {
   React.useEffect(() => {
     loadCalendarData();
   }, [currentDate, viewMode]);
+
+  React.useEffect(() => {
+    // Initial fetch
+    const loadProspects = async () => {
+      const prospects = await fetchProspects();
+      if (prospects) {
+        setAllProspects(prospects);
+        setCalendarProspects(prospects);
+      }
+    };
+    loadProspects();
+
+    // Subscribe to realtime updates
+    realtimeManager.subscribe({
+      onProspectChange: async (payload) => {
+        const { eventType, new: newProspect, old: oldProspect } = payload;
+
+        // Optimistically update the UI
+        setAllProspects(prevProspects => {
+          switch (eventType) {
+            case 'INSERT':
+              return [...prevProspects, newProspect];
+            case 'UPDATE':
+              return prevProspects.map(p => 
+                p.id === newProspect.id ? { ...p, ...newProspect } : p
+              );
+            case 'DELETE':
+              return prevProspects.filter(p => p.id !== oldProspect.id);
+            default:
+              return prevProspects;
+          }
+        });
+
+        // Fetch the latest data to ensure consistency
+        const prospects = await fetchProspects();
+        if (prospects) {
+          setAllProspects(prospects);
+          setCalendarProspects(prospects);
+        }
+      },
+      onReminderChange: async (payload) => {
+        // Fetch the latest data when reminders change
+        const prospects = await fetchProspects();
+        if (prospects) {
+          setAllProspects(prospects);
+          setCalendarProspects(prospects);
+        }
+      },
+      onServiceChange: async (payload) => {
+        // Fetch the latest data when services change
+        const prospects = await fetchProspects();
+        if (prospects) {
+          setAllProspects(prospects);
+          setCalendarProspects(prospects);
+        }
+      }
+    });
+
+    return () => {
+      realtimeManager.unsubscribe();
+    };
+  }, []);
 
   const handleAddProspect = async (newProspect: Omit<Prospect, 'id'>) => {
     const tempId = uuidv4();
