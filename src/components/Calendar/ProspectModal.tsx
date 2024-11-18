@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Calendar, Clock, MapPin, Phone, User, Flag, AlertTriangle, MessageCircle } from 'lucide-react';
+import { X, Calendar, Clock, MapPin, Phone, User, Flag, AlertTriangle, MessageCircle, MessageSquare, Check, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { Prospect, Reminder } from '../../types/calendar';
 import { ServiceTypeSelector } from './ServiceTypeSelector';
@@ -442,8 +442,12 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
               <span
                 className={`px-2.5 py-1 rounded-full text-sm ${
                   statusColors[currentProspect.status]
-                }`}
+                } flex items-center gap-1`}
               >
+                {currentProspect.status === 'pending' && <Clock className="w-3 h-3" />}
+                {currentProspect.status === 'confirmed' && <Check className="w-3 h-3" />}
+                {currentProspect.status === 'completed' && <CheckCircle className="w-3 h-3" />}
+                {currentProspect.status === 'cancelled' && <X className="w-3 h-3" />}
                 {currentProspect.status.charAt(0).toUpperCase() +
                   currentProspect.status.slice(1)}
               </span>
@@ -510,7 +514,7 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
 
             {/* Date and Time */}
             {currentProspect.datetime && (
-              <div className="flex items-center text-gray-600">
+              <div className="flex items-center text-gray-600 text-sm">
                 <Calendar className="w-4 h-4" />
                 <span className="ml-2">
                   {format(new Date(currentProspect.datetime), "d MMM yyyy")}
@@ -531,7 +535,7 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
               <div className="relative">
                 <button
                   onClick={() => setShowPhoneMenu(!showPhoneMenu)}
-                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group text-sm"
                 >
                   <Phone className="w-4 h-4 group-hover:text-blue-500" />
                   <span className="group-hover:text-blue-500">
@@ -563,7 +567,7 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
               </div>
 
               {(currentProspect.location || currentProspect.address) && (
-                <div className="flex gap-2 text-gray-600">
+                <div className="flex gap-2 text-gray-600 text-sm">
                   <MapPin className="w-4 h-4 mt-0.5" />
                   <div>
                     {currentProspect.location && (
@@ -583,6 +587,10 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
             {/* Notes */}
             {currentProspect.notes && (
               <div className="bg-gray-50 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <MessageSquare className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm font-medium text-gray-600">Notes</span>
+                </div>
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">
                   {currentProspect.notes}
                 </p>
