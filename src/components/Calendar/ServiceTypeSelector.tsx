@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, X, Settings } from 'lucide-react';
 import { ServiceType, ServiceDetails } from '../../types/calendar';
 import { toast } from 'react-toastify';
@@ -120,61 +120,7 @@ interface ServiceOptionsModalProps {
   onDelete?: () => void;
   isEditing?: boolean;
   loadingType?: string | null;
-}
-
-// Add this helper component for number inputs
-interface NumberInputProps {
-  value: number;
-  onChange: (value: number) => void;
-  min?: number;
-  label: string;
-}
-
-function NumberInput({ value, onChange, min = 1, label }: NumberInputProps) {
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = parseInt(e.target.value) || min;
-    if (newValue >= min) {
-      onChange(newValue);
-    }
-  };
-
-  const handleBlur = () => {
-    if (value < min) {
-      onChange(min);
-    }
-  };
-
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        {label}
-      </label>
-      <div className="flex items-center">
-        <button
-          type="button"
-          onClick={() => value > min && onChange(value - 1)}
-          className="w-10 px-3 py-1 border rounded-l-lg hover:bg-gray-50 transition-colors flex items-center justify-center"
-        >
-          -
-        </button>
-        <input
-          type="number"
-          min={min}
-          value={value}
-          onChange={handleInputChange}
-          onBlur={handleBlur}
-          className="w-16 px-2 py-1 border-t border-b text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          type="button"
-          onClick={() => onChange(value + 1)}
-          className="w-10 px-3 py-1 border rounded-r-lg hover:bg-gray-50 transition-colors flex items-center justify-center"
-        >
-          +
-        </button>
-      </div>
-    </div>
-  );
+  initialDetails?: ServiceDetails[string];
 }
 
 function ServiceOptionsModal({ 
@@ -183,9 +129,14 @@ function ServiceOptionsModal({
   onSave,
   onDelete,
   isEditing = false,
-  loadingType
+  loadingType,
+  initialDetails
 }: ServiceOptionsModalProps) {
   const [details, setDetails] = React.useState<ServiceDetails[string]>(() => {
+    if (initialDetails) {
+      return initialDetails;
+    }
+
     const defaultValues = {
       'couch': { material: 'fabric', seats: 7 },
       'carpet': { size: 'medium', quantity: 1 },
@@ -195,6 +146,12 @@ function ServiceOptionsModal({
 
     return defaultValues[type];
   });
+
+  useEffect(() => {
+    if (initialDetails) {
+      setDetails(initialDetails);
+    }
+  }, [initialDetails]);
 
   const [deleteInProgress, setDeleteInProgress] = React.useState(false);
 
@@ -419,6 +376,60 @@ function ServiceOptionsModal({
   );
 }
 
+interface NumberInputProps {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  label: string;
+}
+
+function NumberInput({ value, onChange, min = 1, label }: NumberInputProps) {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = parseInt(e.target.value) || min;
+    if (newValue >= min) {
+      onChange(newValue);
+    }
+  };
+
+  const handleBlur = () => {
+    if (value < min) {
+      onChange(min);
+    }
+  };
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        {label}
+      </label>
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={() => value > min && onChange(value - 1)}
+          className="w-10 px-3 py-1 border rounded-l-lg hover:bg-gray-50 transition-colors flex items-center justify-center"
+        >
+          -
+        </button>
+        <input
+          type="number"
+          min={min}
+          value={value}
+          onChange={handleInputChange}
+          onBlur={handleBlur}
+          className="w-16 px-2 py-1 border-t border-b text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          type="button"
+          onClick={() => onChange(value + 1)}
+          className="w-10 px-3 py-1 border rounded-r-lg hover:bg-gray-50 transition-colors flex items-center justify-center"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function ServiceTypeSelector({
   selectedServices,
   serviceDetails,
@@ -637,6 +648,7 @@ export function ServiceTypeSelector({
           onSave={handleSaveService}
           onDelete={editingServiceId ? handleDeleteService : undefined}
           isEditing={!!editingServiceId}
+          initialDetails={editingServiceId ? serviceDetails[editingServiceId] : undefined}
         />
       )}
     </div>

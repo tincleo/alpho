@@ -82,7 +82,7 @@ export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, o
     };
 
     fetchLocations().then((data: any) => {
-      const locations = data.map((location: LocationRow) => location.name);
+      const locations = data.map((location: LocationRow) => location.name).sort((a, b) => a.localeCompare(b));
       setLocations(locations);
       setSelectedLocations(locations);
     });
@@ -314,7 +314,7 @@ export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, o
                     {isLocationsOpen && (
                       <div
                         ref={dropdownRef}
-                        className="absolute z-10 mt-1 w-full bg-white rounded-lg shadow-lg border border-gray-200 max-h-48 overflow-y-auto"
+                        className="absolute z-10 mt-1 w-full bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto"
                       >
                         <div className="sticky top-0 bg-white border-b border-gray-100 p-2">
                           <button
