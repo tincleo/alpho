@@ -55,16 +55,24 @@ function LocationModal({
   existingLocations?: LocationRow[];
 }) {
   const [formData, setFormData] = useState<LocationFormData>(initialData);
+  const [nameError, setNameError] = useState('');
 
   useEffect(() => {
-    if (isOpen) {
-      // Ensure neighboring is always an array
-      setFormData({
-        ...initialData,
-        neighboring: initialData.neighboring || []
-      });
+    setFormData(initialData);
+    setNameError('');
+  }, [initialData]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate name
+    if (!formData.name.trim()) {
+      setNameError('Location name is required');
+      return;
     }
-  }, [isOpen, initialData]);
+    
+    onSubmit(formData);
+  };
 
   const locationOptions = existingLocations
     .filter(loc => loc.name !== formData.name) // Exclude current location
@@ -79,14 +87,9 @@ function LocationModal({
       label: name
     }));
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
+      <Dialog as="div" className="relative z-10" onClose={onClose}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -100,7 +103,7 @@ function LocationModal({
         </Transition.Child>
 
         <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4">
+          <div className="flex min-h-full items-center justify-center p-4 text-center">
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
@@ -110,60 +113,87 @@ function LocationModal({
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all">
+              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
                 <Dialog.Title className="text-lg font-medium text-gray-900 mb-4">
                   {initialData.name ? 'Edit Location' : 'New Location'}
                 </Dialog.Title>
                 <form onSubmit={handleSubmit}>
                   <div className="space-y-4">
-                    <div>
+                    <div className="mt-2">
                       <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                        Name
+                        Name<span className="text-red-500 ml-1">*</span>
                       </label>
-                      <input
-                        type="text"
-                        id="name"
-                        required
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      />
+                      <div className="mt-1">
+                        <input
+                          type="text"
+                          name="name"
+                          id="name"
+                          required
+                          value={formData.name}
+                          onChange={(e) => {
+                            setFormData({ ...formData, name: e.target.value });
+                            setNameError('');
+                          }}
+                          className={clsx(
+                            "block w-full rounded-md shadow-sm sm:text-sm",
+                            nameError
+                              ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                              : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          )}
+                        />
+                        {nameError && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {nameError}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <label htmlFor="commune" className="block text-sm font-medium text-gray-700">
-                        Commune
-                      </label>
-                      <select
-                        id="commune"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        value={formData.commune}
-                        onChange={(e) => setFormData({ ...formData, commune: e.target.value })}
-                      >
-                        {communes.map((commune) => (
-                          <option key={commune} value={commune}>
-                            {commune}
-                          </option>
-                        ))}
-                      </select>
+
+                    <div className="mt-4 grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="commune" className="block text-sm font-medium text-gray-700">
+                          Commune
+                        </label>
+                        <div className="mt-1">
+                          <select
+                            id="commune"
+                            name="commune"
+                            value={formData.commune}
+                            onChange={(e) => setFormData({ ...formData, commune: e.target.value })}
+                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                          >
+                            {communes.map((commune) => (
+                              <option key={commune} value={commune}>
+                                {commune}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="standing" className="block text-sm font-medium text-gray-700">
+                          Standing
+                        </label>
+                        <div className="mt-1">
+                          <select
+                            id="standing"
+                            name="standing"
+                            value={formData.standing}
+                            onChange={(e) => setFormData({ ...formData, standing: e.target.value })}
+                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                          >
+                            {standings.map((standing) => (
+                              <option key={standing} value={standing}>
+                                {standing}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label htmlFor="standing" className="block text-sm font-medium text-gray-700">
-                        Standing
-                      </label>
-                      <select
-                        id="standing"
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        value={formData.standing}
-                        onChange={(e) => setFormData({ ...formData, standing: e.target.value })}
-                      >
-                        {standings.map((standing) => (
-                          <option key={standing} value={standing}>
-                            {standing}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
+
+                    <div className="mt-4">
                       <label htmlFor="neighboring" className="block text-sm font-medium text-gray-700">
                         Neighboring
                       </label>
@@ -566,7 +596,7 @@ function LocationsSettings() {
             <div className="relative rounded-md shadow-sm max-w-md">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" />
                 </svg>
               </div>
               <input
@@ -583,7 +613,7 @@ function LocationsSettings() {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 >
                   <svg className="h-5 w-5 text-gray-400 hover:text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
                 </button>
               )}
