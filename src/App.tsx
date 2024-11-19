@@ -493,7 +493,7 @@ export default function App() {
               <Team />
             </div>
           } />
-          <Route path="/settings" element={
+          <Route path="/settings/*" element={
             <div className="flex-1 flex flex-col min-w-0">
               <div className="sticky top-0 z-20">
                 <CalendarHeader
