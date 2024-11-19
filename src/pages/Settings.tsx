@@ -3,7 +3,7 @@ import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { supabase } from '../lib/supabase';
 import { LocationRow } from '../lib/api';
-import { Dialog, Transition, Popover } from '@headlessui/react';
+import { Dialog, Transition, Menu, Popover } from '@headlessui/react';
 
 const tabs = [
   { name: 'Locations', path: 'locations' },
@@ -161,6 +161,70 @@ function LocationModal({
   );
 }
 
+function ActionMenu({ location, onEdit, onDelete }: { 
+  location: LocationRow; 
+  onEdit: () => void; 
+  onDelete: () => void;
+}) {
+  return (
+    <Menu as="div" className="relative inline-block text-left">
+      <Menu.Button className="flex items-center text-gray-400 hover:text-gray-600">
+        <span className="sr-only">Open options</span>
+        <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+        </svg>
+      </Menu.Button>
+
+      <Transition
+        as={Fragment}
+        enter="transition ease-out duration-100"
+        enterFrom="transform opacity-0 scale-95"
+        enterTo="transform opacity-100 scale-100"
+        leave="transition ease-in duration-75"
+        leaveFrom="transform opacity-100 scale-100"
+        leaveTo="transform opacity-0 scale-95"
+      >
+        <Menu.Items className="absolute right-0 z-10 mt-2 w-36 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+          <div className="py-1">
+            <Menu.Item>
+              {({ active }) => (
+                <button
+                  onClick={onEdit}
+                  className={clsx(
+                    active ? 'bg-gray-100' : '',
+                    'flex w-full px-4 py-2 text-sm text-gray-700'
+                  )}
+                >
+                  <svg className="mr-3 h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                  </svg>
+                  Edit
+                </button>
+              )}
+            </Menu.Item>
+            <Menu.Item>
+              {({ active }) => (
+                <Popover.Button
+                  className={clsx(
+                    active ? 'bg-gray-100' : '',
+                    'flex w-full px-4 py-2 text-sm text-red-700'
+                  )}
+                >
+                  <svg className="mr-3 h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" />
+                  </svg>
+                  Delete
+                </Popover.Button>
+              )}
+            </Menu.Item>
+          </div>
+        </Menu.Items>
+      </Transition>
+    </Menu>
+  );
+}
+
 function DeleteConfirmationPopover({ onConfirm, locationName }: { onConfirm: () => void, locationName: string }) {
   return (
     <Popover className="relative">
@@ -169,6 +233,7 @@ function DeleteConfirmationPopover({ onConfirm, locationName }: { onConfirm: () 
       </Popover.Button>
 
       <Transition
+        show={true}
         as={Fragment}
         enter="transition ease-out duration-200"
         enterFrom="opacity-0 translate-y-1"
@@ -177,7 +242,7 @@ function DeleteConfirmationPopover({ onConfirm, locationName }: { onConfirm: () 
         leaveFrom="opacity-100 translate-y-0"
         leaveTo="opacity-0 translate-y-1"
       >
-        <Popover.Panel className="absolute z-10 right-0 mt-2 w-72">
+        <Popover.Panel className="absolute z-20 right-0 mt-2 w-72">
           <div className="overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5">
             <div className="relative bg-white p-4">
               <div className="text-sm text-gray-900 mb-3">
@@ -322,17 +387,52 @@ function LocationsSettings() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{location.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{location.commune || '-'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{location.standing || '-'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => openEditModal(location)}
-                          className="text-blue-600 hover:text-blue-900 mr-4"
-                        >
-                          Edit
-                        </button>
-                        <DeleteConfirmationPopover
-                          locationName={location.name}
-                          onConfirm={() => handleDeleteLocation(location.name)}
-                        />
+                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                        <Popover>
+                          {({ open }) => (
+                            <>
+                              <ActionMenu
+                                location={location}
+                                onEdit={() => {
+                                  setEditingLocation(location);
+                                  setIsModalOpen(true);
+                                }}
+                                onDelete={() => handleDeleteLocation(location.name)}
+                              />
+                              <Transition
+                                show={open}
+                                as={Fragment}
+                                enter="transition ease-out duration-200"
+                                enterFrom="opacity-0 translate-y-1"
+                                enterTo="opacity-100 translate-y-0"
+                                leave="transition ease-in duration-150"
+                                leaveFrom="opacity-100 translate-y-0"
+                                leaveTo="opacity-0 translate-y-1"
+                              >
+                                <Popover.Panel className="absolute z-20 right-0 mt-2 w-72">
+                                  <div className="overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5">
+                                    <div className="relative bg-white p-4">
+                                      <div className="text-sm text-gray-900 mb-3">
+                                        Are you sure you want to delete <span className="font-semibold">{location.name}</span>?
+                                      </div>
+                                      <div className="flex justify-end space-x-2">
+                                        <Popover.Button className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                          Cancel
+                                        </Popover.Button>
+                                        <Popover.Button
+                                          className="rounded-md border border-transparent bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+                                          onClick={() => handleDeleteLocation(location.name)}
+                                        >
+                                          Delete
+                                        </Popover.Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </Popover.Panel>
+                              </Transition>
+                            </>
+                          )}
+                        </Popover>
                       </td>
                     </tr>
                   ))}
