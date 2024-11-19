@@ -12,7 +12,6 @@ interface AddProspectModalProps {
   onAdd: (prospect: Omit<Prospect, 'id'>) => Promise<void>;
   selectedDate?: Date;
   initialProspect?: Prospect;
-  initialType?: 'prospect' | 'follow-up';
   hideServices?: boolean;
   prefillData?: Omit<Prospect, 'id'>;
 }
@@ -39,7 +38,7 @@ const formatPhoneNumber = (value: string) => {
   return `${numbers.slice(0, 3)} ${numbers.slice(3, 5)} ${numbers.slice(5, 7)} ${numbers.slice(7)}`;
 };
 
-export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect, initialType, hideServices = false, prefillData }: AddProspectModalProps) {
+export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect, hideServices = false, prefillData }: AddProspectModalProps) {
   const [selectedServices, setSelectedServices] = React.useState<ServiceInstance[]>(
     initialProspect?.services.map(s => ({
       id: s.id,
@@ -81,9 +80,6 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
     priority: prefillData?.priority ?? initialProspect?.priority ?? 'medium',
     name: prefillData?.name ?? initialProspect?.name ?? '',
   });
-  const [prospectType, setProspectType] = React.useState<'prospect' | 'follow-up'>(
-    initialType ?? (selectedDate ? 'prospect' : 'follow-up')
-  );
   const [showNotes, setShowNotes] = React.useState(!!initialProspect?.notes);
   const [locations, setLocations] = React.useState<Location[]>([]);
 
@@ -158,11 +154,6 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
       return;
     }
 
-    if (prospectType === 'prospect' && !formData.date) {
-      toast.error('Prospect date is required for confirmed prospects');
-      return;
-    }
-
     if (formData.status === 'confirmed' && !formData.startTime) {
       toast.error('Start time is required for confirmed prospects');
       return;
@@ -191,10 +182,7 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
       location: location?.name,
       address: formData.address,
       phone: formData.phone,
-      datetime:
-        prospectType === "prospect"
-          ? startDateTime.toISOString()
-          : new Date().toISOString(),
+      datetime: startDateTime.toISOString(),
       notes: formData.notes,
       status: formData.status,
       isAllDay: formData.isAllDay,
@@ -247,38 +235,6 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
 
         <div className="flex-1 overflow-y-auto p-6">
           <form className="space-y-4 text-sm">
-            <div>
-              <label className="block font-medium text-gray-700 mb-1">
-                Type
-              </label>
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={() => setProspectType('prospect')}
-                  className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-all ${
-                    prospectType === 'prospect'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  <Calendar className="w-4 h-4" />
-                  <span className="font-medium">Prospect</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setProspectType('follow-up')}
-                  className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-all ${
-                    prospectType === 'follow-up'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  <UserCheck className="w-4 h-4" />
-                  <span className="font-medium">Follow-up</span>
-                </button>
-              </div>
-            </div>
-
             {!hideServices && (
               <div className="border rounded-lg overflow-visible">
                 <div className="p-4">
@@ -292,7 +248,6 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
                 </div>
               </div>
             )}
-
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block font-medium text-gray-700 mb-1">
