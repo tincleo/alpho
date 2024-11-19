@@ -597,6 +597,10 @@ function LocationsSettings() {
             <table className="min-w-full divide-y divide-gray-300">
               <thead className="bg-gray-50">
                 <tr>
+                  {/* Fixed # column */}
+                  <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 w-12">
+                    #
+                  </th>
                   {columns.map(column => (
                     visibleColumns[column.id as keyof typeof visibleColumns] && (
                       <th
@@ -673,8 +677,12 @@ function LocationsSettings() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {filteredLocations.map((location) => (
+                {filteredLocations.map((location, index) => (
                   <tr key={location.id}>
+                    {/* Fixed # column */}
+                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-500 sm:pl-6">
+                      {index + 1}
+                    </td>
                     {visibleColumns.name && (
                       <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                         {location.name}
