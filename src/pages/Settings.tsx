@@ -54,14 +54,28 @@ function LocationModal({
   initialData?: LocationFormData;
   existingLocations?: LocationRow[];
 }) {
-  const [formData, setFormData] = useState<LocationFormData>(initialData);
+  const [formData, setFormData] = useState<LocationFormData>(() => ({
+    name: initialData.name || '',
+    commune: initialData.commune || communes[0],
+    standing: initialData.standing || standings[0],
+    neighboring: initialData.neighboring || [],
+    ...(initialData.id ? { id: initialData.id } : {})
+  }));
   const [nameError, setNameError] = useState('');
 
-  // Update form data when initialData changes
+  // Reset form when modal opens/closes or initialData changes
   useEffect(() => {
-    setFormData(initialData);
-    setNameError('');
-  }, [initialData]);
+    if (isOpen) {
+      setFormData({
+        name: initialData.name || '',
+        commune: initialData.commune || communes[0],
+        standing: initialData.standing || standings[0],
+        neighboring: initialData.neighboring || [],
+        ...(initialData.id ? { id: initialData.id } : {})
+      });
+      setNameError('');
+    }
+  }, [isOpen, initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,6 +219,19 @@ function LocationModal({
                         }}
                         className="mt-1"
                         classNamePrefix="select"
+                        styles={{
+                          menu: (base) => ({
+                            ...base,
+                            zIndex: 9999,
+                            position: 'relative'
+                          }),
+                          menuPortal: (base) => ({
+                            ...base,
+                            zIndex: 9999
+                          })
+                        }}
+                        menuPortalTarget={document.body}
+                        menuPosition="fixed"
                       />
                     </div>
                   </div>
