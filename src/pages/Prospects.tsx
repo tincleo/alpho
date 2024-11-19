@@ -36,12 +36,16 @@ export default function Prospects() {
     setGridApi(params.api);
     params.api.sizeColumnsToFit();
     
-    // Auto-size all columns
-    const allColumnIds: string[] = [];
-    params.columnApi.getColumns()?.forEach((column) => {
-      allColumnIds.push(column.getId());
-    });
-    params.columnApi.autoSizeColumns(allColumnIds);
+    // Auto-size all columns if columnApi is available
+    if (params.columnApi) {
+      const allColumnIds: string[] = [];
+      params.columnApi.getColumns()?.forEach((column) => {
+        allColumnIds.push(column.getId());
+      });
+      if (allColumnIds.length > 0) {
+        params.columnApi.autoSizeColumns(allColumnIds);
+      }
+    }
   };
 
   const onFilterTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
