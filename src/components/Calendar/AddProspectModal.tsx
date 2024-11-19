@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { X, Calendar, UserCheck, ChevronDown, Plus } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, Calendar, Clock, ChevronDown, Plus, Check, CheckCircle, Flag } from 'lucide-react';
 import { format, setHours, setMinutes, parse, addHours } from 'date-fns';
 import { Prospect, ServiceType, ServiceDetails, Location, Priority, Reminder } from '../../types/calendar';
 import { ServiceTypeSelector } from './ServiceTypeSelector';
@@ -36,6 +36,19 @@ const formatPhoneNumber = (value: string) => {
   if (numbers.length <= 5) return `${numbers.slice(0, 3)} ${numbers.slice(3)}`;
   if (numbers.length <= 7) return `${numbers.slice(0, 3)} ${numbers.slice(3, 5)} ${numbers.slice(5)}`;
   return `${numbers.slice(0, 3)} ${numbers.slice(3, 5)} ${numbers.slice(5, 7)} ${numbers.slice(7)}`;
+};
+
+const statusColors = {
+  pending: 'bg-yellow-100 text-yellow-600',
+  confirmed: 'bg-green-100 text-green-600',
+  completed: 'bg-blue-100 text-blue-600',
+  cancelled: 'bg-red-100 text-red-600',
+};
+
+const priorityColors = {
+  low: 'bg-green-100 text-green-600',
+  medium: 'bg-yellow-100 text-yellow-600',
+  high: 'bg-red-100 text-red-600',
 };
 
 export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect, hideServices = false, prefillData }: AddProspectModalProps) {
@@ -82,6 +95,33 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
   });
   const [showNotes, setShowNotes] = React.useState(!!initialProspect?.notes);
   const [locations, setLocations] = React.useState<Location[]>([]);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
+  const statusDropdownRef = React.useRef<HTMLDivElement>(null);
+  const priorityDropdownRef = React.useRef<HTMLDivElement>(null);
+
+  const STATUS_OPTIONS = ['pending', 'confirmed', 'completed', 'cancelled'] as const;
+  const PRIORITY_OPTIONS = ['low', 'medium', 'high'] as const;
+
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        statusDropdownRef.current &&
+        !statusDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowStatusDropdown(false);
+      }
+      if (
+        priorityDropdownRef.current &&
+        !priorityDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowPriorityDropdown(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     fetchLocations().then((data: any) =>
@@ -221,11 +261,94 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-3 border-b">
-          <h2 className="text-lg font-semibold text-gray-900">
-            {initialProspect ? 'Edit Prospect' : 'New Prospect'}
-          </h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {initialProspect ? 'Edit Prospect' : 'New Prospect'}
+            </h2>
+          </div>
+          <div className="flex gap-2">
+            <div className="relative" ref={statusDropdownRef}>
+              <button
+                onClick={() => {
+                  setShowStatusDropdown(!showStatusDropdown);
+                  setShowPriorityDropdown(false);
+                }}
+                className={`px-2.5 py-1 rounded-full text-sm ${
+                  statusColors[formData.status]
+                } flex items-center gap-1 hover:ring-2 hover:ring-gray-200 transition-all`}
+              >
+                {formData.status === 'pending' && <Clock className="w-3 h-3" />}
+                {formData.status === 'confirmed' && <Check className="w-3 h-3" />}
+                {formData.status === 'completed' && <CheckCircle className="w-3 h-3" />}
+                {formData.status === 'cancelled' && <X className="w-3 h-3" />}
+                {formData.status.charAt(0).toUpperCase() +
+                  formData.status.slice(1)}
+                <ChevronDown className="w-3 h-3" />
+              </button>
+              {showStatusDropdown && (
+                <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
+                  {STATUS_OPTIONS.map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => 
+                        setFormData(prev => ({
+                          ...prev,
+                          status
+                        }))
+                      }
+                      className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2
+                        ${formData.status === status ? 'bg-gray-50' : ''}`}
+                    >
+                      {status === 'pending' && <Clock className="w-3 h-3" />}
+                      {status === 'confirmed' && <Check className="w-3 h-3" />}
+                      {status === 'completed' && <CheckCircle className="w-3 h-3" />}
+                      {status === 'cancelled' && <X className="w-3 h-3" />}
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="relative" ref={priorityDropdownRef}>
+              <button
+                onClick={() => {
+                  setShowPriorityDropdown(!showPriorityDropdown);
+                  setShowStatusDropdown(false);
+                }}
+                className={`px-2.5 py-1 rounded-full text-sm ${
+                  priorityColors[formData.priority]
+                } hover:ring-2 hover:ring-gray-200 transition-all`}
+              >
+                <div className="flex items-center gap-1">
+                  <Flag className="w-3 h-3" />
+                  {formData.priority.charAt(0).toUpperCase() +
+                    formData.priority.slice(1)}
+                  <ChevronDown className="w-3 h-3" />
+                </div>
+              </button>
+              {showPriorityDropdown && (
+                <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
+                  {PRIORITY_OPTIONS.map((priority) => (
+                    <button
+                      key={priority}
+                      onClick={() => 
+                        setFormData(prev => ({
+                          ...prev,
+                          priority
+                        }))
+                      }
+                      className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2
+                        ${formData.priority === priority ? 'bg-gray-50' : ''}`}
+                    >
+                      <Flag className="w-3 h-3" />
+                      {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
           <button
-            type="button"
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500"
           >
@@ -379,51 +502,6 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
                   }`}
                 />
               </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      status: e.target.value as any,
-                    }))
-                  }
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                >
-                  <option value="pending">Pending</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-medium text-gray-700 mb-1">
-                  Priority
-                </label>
-                <select
-                  value={formData.priority}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      priority: e.target.value as any,
-                    }))
-                  }
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                >
-                  {PRIORITIES.map((priority) => (
-                    <option key={priority} value={priority}>
-                      {priority.charAt(0).toUpperCase() + priority.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             <div>
