@@ -1,10 +1,10 @@
-import React, { useState, useEffect, Fragment } from 'react';
+import React, { useState, Fragment } from 'react';
 import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import Select from 'react-select';
 import clsx from 'clsx';
-import { supabase } from '../lib/supabase';
-import { LocationRow } from '../lib/api';
-import { Dialog, Transition, Menu, Popover } from '@headlessui/react';
+import { Dialog, Transition, Menu } from '@headlessui/react';
+import { LocationFormData, LocationRow } from '../types/location';
+import { useLocations } from '../hooks/useLocations';
 
 const tabs = [
   { name: 'Locations', path: 'locations' },
@@ -56,11 +56,6 @@ function LocationModal({
 }) {
   const [formData, setFormData] = useState<LocationFormData>(initialData);
   const [nameError, setNameError] = useState('');
-
-  useEffect(() => {
-    setFormData(initialData);
-    setNameError('');
-  }, [initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -480,10 +475,19 @@ function ActionMenu({ location, onEdit, onDelete }: {
 
 // Locations Settings Component
 function LocationsSettings() {
-  const [locations, setLocations] = useState<LocationRow[]>([]);
+  const {
+    locations,
+    isLoading,
+    error,
+    createLocation,
+    updateLocation,
+    deleteLocation,
+    isCreating,
+    isUpdating,
+    isDeleting
+  } = useLocations();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<LocationFormData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [visibleColumns, setVisibleColumns] = useState({
     name: true,
@@ -500,22 +504,6 @@ function LocationsSettings() {
     { id: 'neighboring', name: 'Neighboring' }
   ];
 
-  useEffect(() => {
-    fetchLocations();
-  }, []);
-
-  const fetchLocations = async () => {
-    try {
-      const { data, error } = await supabase.from('locations').select('*').order('name');
-      if (error) throw error;
-      setLocations(data || []);
-    } catch (error) {
-      console.error('Error fetching locations:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const filteredLocations = locations.filter(location => {
     const searchLower = searchQuery.toLowerCase();
     return location.name.toLowerCase().includes(searchLower);
@@ -523,43 +511,18 @@ function LocationsSettings() {
 
   const handleCreateLocation = async (formData: LocationFormData) => {
     try {
-      // Check if we have a valid session
-      const { data: session } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('No active session found');
-      }
-
-      const { data, error } = await supabase
-        .from('locations')
-        .insert([{
-          name: formData.name,
-          commune: formData.commune,
-          standing: formData.standing,
-          neighboring: formData.neighboring
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      await fetchLocations();
+      await createLocation(formData);
       setIsModalOpen(false);
-      setEditingLocation(null);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating location:', error);
-      // Show error message to user
-      alert(`Error creating location: ${error.message || 'Unknown error occurred'}`);
     }
   };
 
   const handleUpdateLocation = async (formData: LocationFormData) => {
+    if (!editingLocation?.id) return;
+    
     try {
-      const { error } = await supabase
-        .from('locations')
-        .update(formData)
-        .eq('name', editingLocation?.name);
-      if (error) throw error;
-      await fetchLocations();
+      await updateLocation({ id: editingLocation.id, formData });
       setIsModalOpen(false);
       setEditingLocation(null);
     } catch (error) {
@@ -567,11 +530,9 @@ function LocationsSettings() {
     }
   };
 
-  const handleDeleteLocation = async (name: string) => {
+  const handleDeleteLocation = async (id: number) => {
     try {
-      const { error } = await supabase.from('locations').delete().eq('name', name);
-      if (error) throw error;
-      await fetchLocations();
+      await deleteLocation(id);
     } catch (error) {
       console.error('Error deleting location:', error);
     }
@@ -751,7 +712,7 @@ function LocationsSettings() {
                       <ActionMenu
                         location={location}
                         onEdit={() => openEditModal(location)}
-                        onDelete={() => handleDeleteLocation(location.name)}
+                        onDelete={() => handleDeleteLocation(location.id)}
                       />
                     </td>
                   </tr>

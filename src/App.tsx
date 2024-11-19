@@ -19,6 +19,7 @@ import Team from './pages/Team';
 import Settings from './pages/Settings';
 import Prospects from './pages/Prospects';
 import { realtimeManager } from './lib/realtimeManager';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const LOCATIONS: Location[] = [
   'Bastos', 'Mvan', 'Nsam', 'Mvog-Mbi', 'Essos', 
@@ -26,6 +27,15 @@ const LOCATIONS: Location[] = [
   'Nkolbisson', 'Olembe', 'Ngousso', 'Messa', 
   'Omnisport', 'Tsinga', 'Etoa-Meki', 'Nlongkak'
 ];
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // Data remains fresh for 5 minutes
+      cacheTime: 1000 * 60 * 30, // Cache is kept for 30 minutes
+    },
+  },
+});
 
 export default function App() {
   const [currentDate, setCurrentDate] = React.useState(new Date(2024, 10, 1));
@@ -403,21 +413,60 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-gray-100 flex">
-        <Sidebar
-          selectedServices={selectedServices}
-          onServiceChange={setSelectedServices}
-          selectedStatuses={selectedStatuses}
-          onStatusChange={setSelectedStatuses}
-          onLocationChange={setSelectedLocations}
-          prospects={allProspects}
-          onAddProspect={() => setShowAddModal(true)}
-        />
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <div className="min-h-screen bg-gray-100 flex">
+          <Sidebar
+            selectedServices={selectedServices}
+            onServiceChange={setSelectedServices}
+            selectedStatuses={selectedStatuses}
+            onStatusChange={setSelectedStatuses}
+            onLocationChange={setSelectedLocations}
+            prospects={allProspects}
+            onAddProspect={() => setShowAddModal(true)}
+          />
 
-        <Routes>
-          <Route path="/" element={
-            <>
+          <Routes>
+            <Route path="/" element={
+              <>
+                <div className="flex-1 flex flex-col min-w-0">
+                  <div className="sticky top-0 z-20">
+                    <CalendarHeader
+                      currentDate={currentDate}
+                      viewMode={viewMode}
+                      onPrevious={handlePrevious}
+                      onNext={handleNext}
+                      onToday={handleToday}
+                      onViewModeChange={setViewMode}
+                      onToggleProspects={() => setShowProspects(!showProspects)}
+                      onOpenReminders={() => setShowReminders(true)}
+                      remindersCount={totalReminders}
+                      prospectsCount={allProspects.length}
+                    />
+                  </div>
+                  {viewMode === 'agenda' ? (
+                    <AgendaView
+                      prospects={filteredAgendaProspects}
+                      onUpdateProspect={handleUpdateProspect}
+                      onDeleteProspect={handleDeleteProspect}
+                      onUpdateReminder={handleUpdateReminder}
+                    />
+                  ) : (
+                    <CalendarGrid
+                      currentDate={currentDate}
+                      viewMode={viewMode}
+                      prospects={filteredCalendarProspects}
+                      onAddProspect={handleAddProspectClick}
+                      onUpdateProspect={handleUpdateProspect}
+                      onDeleteProspect={handleDeleteProspect}
+                      onUpdateReminder={handleUpdateReminder}
+                      isLoading={isLoadingCalendar}
+                    />
+                  )}
+                </div>
+              </>
+            } />
+            <Route path="/prospects" element={
               <div className="flex-1 flex flex-col min-w-0">
                 <div className="sticky top-0 z-20">
                   <CalendarHeader
@@ -433,145 +482,108 @@ export default function App() {
                     prospectsCount={allProspects.length}
                   />
                 </div>
-                {viewMode === 'agenda' ? (
-                  <AgendaView
-                    prospects={filteredAgendaProspects}
-                    onUpdateProspect={handleUpdateProspect}
-                    onDeleteProspect={handleDeleteProspect}
-                    onUpdateReminder={handleUpdateReminder}
-                  />
-                ) : (
-                  <CalendarGrid
+                <Prospects />
+              </div>
+            } />
+            <Route path="/team" element={
+              <div className="flex-1 flex flex-col min-w-0">
+                <div className="sticky top-0 z-20">
+                  <CalendarHeader
                     currentDate={currentDate}
                     viewMode={viewMode}
-                    prospects={filteredCalendarProspects}
-                    onAddProspect={handleAddProspectClick}
-                    onUpdateProspect={handleUpdateProspect}
-                    onDeleteProspect={handleDeleteProspect}
-                    onUpdateReminder={handleUpdateReminder}
-                    isLoading={isLoadingCalendar}
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                    onToday={handleToday}
+                    onViewModeChange={setViewMode}
+                    onToggleProspects={() => setShowProspects(!showProspects)}
+                    onOpenReminders={() => setShowReminders(true)}
+                    remindersCount={totalReminders}
+                    prospectsCount={allProspects.length}
                   />
-                )}
+                </div>
+                <Team />
               </div>
-            </>
-          } />
-          <Route path="/prospects" element={
-            <div className="flex-1 flex flex-col min-w-0">
-              <div className="sticky top-0 z-20">
-                <CalendarHeader
-                  currentDate={currentDate}
-                  viewMode={viewMode}
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                  onToday={handleToday}
-                  onViewModeChange={setViewMode}
-                  onToggleProspects={() => setShowProspects(!showProspects)}
-                  onOpenReminders={() => setShowReminders(true)}
-                  remindersCount={totalReminders}
-                  prospectsCount={allProspects.length}
-                />
+            } />
+            <Route path="/settings/*" element={
+              <div className="flex-1 flex flex-col min-w-0">
+                <div className="sticky top-0 z-20">
+                  <CalendarHeader
+                    currentDate={currentDate}
+                    viewMode={viewMode}
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                    onToday={handleToday}
+                    onViewModeChange={setViewMode}
+                    onToggleProspects={() => setShowProspects(!showProspects)}
+                    onOpenReminders={() => setShowReminders(true)}
+                    remindersCount={totalReminders}
+                    prospectsCount={allProspects.length}
+                  />
+                </div>
+                <Settings />
               </div>
-              <Prospects />
-            </div>
-          } />
-          <Route path="/team" element={
-            <div className="flex-1 flex flex-col min-w-0">
-              <div className="sticky top-0 z-20">
-                <CalendarHeader
-                  currentDate={currentDate}
-                  viewMode={viewMode}
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                  onToday={handleToday}
-                  onViewModeChange={setViewMode}
-                  onToggleProspects={() => setShowProspects(!showProspects)}
-                  onOpenReminders={() => setShowReminders(true)}
-                  remindersCount={totalReminders}
-                  prospectsCount={allProspects.length}
-                />
-              </div>
-              <Team />
-            </div>
-          } />
-          <Route path="/settings/*" element={
-            <div className="flex-1 flex flex-col min-w-0">
-              <div className="sticky top-0 z-20">
-                <CalendarHeader
-                  currentDate={currentDate}
-                  viewMode={viewMode}
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                  onToday={handleToday}
-                  onViewModeChange={setViewMode}
-                  onToggleProspects={() => setShowProspects(!showProspects)}
-                  onOpenReminders={() => setShowReminders(true)}
-                  remindersCount={totalReminders}
-                  prospectsCount={allProspects.length}
-                />
-              </div>
-              <Settings />
-            </div>
-          } />
-        </Routes>
+            } />
+          </Routes>
 
-        {showAddModal && (
-          <AddProspectModal
-            onClose={() => {
-              setShowAddModal(false);
-              setSelectedDate(undefined);
-            }}
-            onAdd={handleAddProspect}
-            selectedDate={selectedDate}
+          {showAddModal && (
+            <AddProspectModal
+              onClose={() => {
+                setShowAddModal(false);
+                setSelectedDate(undefined);
+              }}
+              onAdd={handleAddProspect}
+              selectedDate={selectedDate}
+            />
+          )}
+
+          <ProspectsSidebar
+            prospects={allProspects}
+            onUpdateProspect={handleUpdateProspect}
+            onDeleteProspect={handleDeleteProspect}
+            isExpanded={showProspects}
+            onToggle={() => setShowProspects(!showProspects)}
           />
-        )}
 
-        <ProspectsSidebar
-          prospects={allProspects}
-          onUpdateProspect={handleUpdateProspect}
-          onDeleteProspect={handleDeleteProspect}
-          isExpanded={showProspects}
-          onToggle={() => setShowProspects(!showProspects)}
-        />
-
-        <RemindersPane
-          isOpen={showReminders}
-          onClose={() => setShowReminders(false)}
-          prospects={allProspects}
-          onProspectClick={setSelectedProspect}
-          onUpdateReminder={handleUpdateReminder}
-        />
-
-        {selectedProspect && (
-          <ProspectModal
-            prospect={selectedProspect}
-            onClose={() => setSelectedProspect(null)}
-            onEdit={handleUpdateProspect}
-            onDelete={handleDeleteProspect}
+          <RemindersPane
+            isOpen={showReminders}
+            onClose={() => setShowReminders(false)}
+            prospects={allProspects}
+            onProspectClick={setSelectedProspect}
             onUpdateReminder={handleUpdateReminder}
           />
-        )}
 
-        {isLoading && (
-          <div className="fixed bottom-4 right-4 bg-white px-4 py-2 rounded-lg shadow-lg">
-            <div className="text-sm text-gray-600">Saving changes...</div>
-          </div>
-        )}
+          {selectedProspect && (
+            <ProspectModal
+              prospect={selectedProspect}
+              onClose={() => setSelectedProspect(null)}
+              onEdit={handleUpdateProspect}
+              onDelete={handleDeleteProspect}
+              onUpdateReminder={handleUpdateReminder}
+            />
+          )}
 
-        <ToastContainer
-          position="bottom-center"
-          autoClose={5000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="dark"
-          className="toast-container"
-          toastClassName="dark-toast"
-        />
-      </div>
-    </BrowserRouter>
+          {isLoading && (
+            <div className="fixed bottom-4 right-4 bg-white px-4 py-2 rounded-lg shadow-lg">
+              <div className="text-sm text-gray-600">Saving changes...</div>
+            </div>
+          )}
+
+          <ToastContainer
+            position="bottom-center"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="dark"
+            className="toast-container"
+            toastClassName="dark-toast"
+          />
+        </div>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
