@@ -1,4 +1,4 @@
-import React, { useState, Fragment } from 'react';
+import React, { useState, Fragment, useEffect } from 'react';
 import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import Select from 'react-select';
 import clsx from 'clsx';
@@ -57,6 +57,12 @@ function LocationModal({
   const [formData, setFormData] = useState<LocationFormData>(initialData);
   const [nameError, setNameError] = useState('');
 
+  // Update form data when initialData changes
+  useEffect(() => {
+    setFormData(initialData);
+    setNameError('');
+  }, [initialData]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -76,11 +82,10 @@ function LocationModal({
       label: loc.name
     }));
 
-  const selectedNeighboring = (formData.neighboring || [])
-    .map(name => ({
-      value: name,
-      label: name
-    }));
+  const selectedNeighboring = formData.neighboring?.map(name => ({
+    value: name,
+    label: name
+  })) || [];
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -112,6 +117,7 @@ function LocationModal({
                 <Dialog.Title className="text-lg font-medium text-gray-900 mb-4">
                   {initialData.name ? 'Edit Location' : 'New Location'}
                 </Dialog.Title>
+
                 <form onSubmit={handleSubmit}>
                   <div className="space-y-4">
                     <div className="mt-2">
@@ -149,117 +155,73 @@ function LocationModal({
                         <label htmlFor="commune" className="block text-sm font-medium text-gray-700">
                           Commune
                         </label>
-                        <div className="mt-1">
-                          <select
-                            id="commune"
-                            name="commune"
-                            value={formData.commune}
-                            onChange={(e) => setFormData({ ...formData, commune: e.target.value })}
-                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                          >
-                            {communes.map((commune) => (
-                              <option key={commune} value={commune}>
-                                {commune}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                        <select
+                          id="commune"
+                          name="commune"
+                          value={formData.commune}
+                          onChange={(e) => setFormData({ ...formData, commune: e.target.value })}
+                          className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                        >
+                          {communes.map((commune) => (
+                            <option key={commune} value={commune}>
+                              {commune}
+                            </option>
+                          ))}
+                        </select>
                       </div>
 
                       <div>
                         <label htmlFor="standing" className="block text-sm font-medium text-gray-700">
                           Standing
                         </label>
-                        <div className="mt-1">
-                          <select
-                            id="standing"
-                            name="standing"
-                            value={formData.standing}
-                            onChange={(e) => setFormData({ ...formData, standing: e.target.value })}
-                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                          >
-                            {standings.map((standing) => (
-                              <option key={standing} value={standing}>
-                                {standing}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                        <select
+                          id="standing"
+                          name="standing"
+                          value={formData.standing}
+                          onChange={(e) => setFormData({ ...formData, standing: e.target.value })}
+                          className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                        >
+                          {standings.map((standing) => (
+                            <option key={standing} value={standing}>
+                              {standing}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
 
                     <div className="mt-4">
                       <label htmlFor="neighboring" className="block text-sm font-medium text-gray-700">
-                        Neighboring
+                        Neighboring Locations
                       </label>
-                      <div className="mt-1">
-                        <Select
-                          isMulti
-                          closeMenuOnSelect={false}
-                          name="neighboring"
-                          options={locationOptions}
-                          className="basic-multi-select"
-                          classNamePrefix="select"
-                          value={selectedNeighboring}
-                          onChange={(selected) => {
-                            const selectedValues = selected ? selected.map(option => option.value) : [];
-                            setFormData({ ...formData, neighboring: selectedValues });
-                          }}
-                          styles={{
-                            control: (base) => ({
-                              ...base,
-                              borderColor: '#D1D5DB',
-                              '&:hover': {
-                                borderColor: '#9CA3AF'
-                              }
-                            }),
-                            multiValue: (base) => ({
-                              ...base,
-                              backgroundColor: '#E5E7EB',
-                              borderRadius: '0.375rem'
-                            }),
-                            multiValueLabel: (base) => ({
-                              ...base,
-                              color: '#374151'
-                            }),
-                            multiValueRemove: (base) => ({
-                              ...base,
-                              color: '#6B7280',
-                              ':hover': {
-                                backgroundColor: '#D1D5DB',
-                                color: '#1F2937'
-                              }
-                            }),
-                            menu: (base) => ({
-                              ...base,
-                              zIndex: 100,
-                              position: 'relative',
-                              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                            }),
-                            menuPortal: (base) => ({
-                              ...base,
-                              zIndex: 100
-                            })
-                          }}
-                          menuPortalTarget={document.body}
-                          menuPosition="fixed"
-                        />
-                      </div>
+                      <Select
+                        isMulti
+                        name="neighboring"
+                        options={locationOptions}
+                        value={selectedNeighboring}
+                        onChange={(selected) => {
+                          const selectedValues = selected ? selected.map(option => option.value) : [];
+                          setFormData({ ...formData, neighboring: selectedValues });
+                        }}
+                        className="mt-1"
+                        classNamePrefix="select"
+                      />
                     </div>
                   </div>
+
                   <div className="mt-6 flex justify-end space-x-3">
                     <button
                       type="button"
-                      className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                       onClick={onClose}
+                      className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                     >
-                      {initialData.name ? 'Save Changes' : 'Create Location'}
+                      {initialData.name ? 'Save Changes' : 'Create'}
                     </button>
                   </div>
                 </form>
@@ -540,6 +502,7 @@ function LocationsSettings() {
 
   const openEditModal = (location: LocationRow) => {
     setEditingLocation({
+      id: location.id,
       name: location.name,
       commune: location.commune || communes[0],
       standing: location.standing || standings[0],
@@ -730,7 +693,7 @@ function LocationsSettings() {
           setEditingLocation(null);
         }}
         onSubmit={editingLocation ? handleUpdateLocation : handleCreateLocation}
-        initialData={editingLocation || { name: '', commune: communes[0], standing: standings[0], neighboring: [] }}
+        initialData={editingLocation || undefined}
         existingLocations={locations}
       />
     </div>

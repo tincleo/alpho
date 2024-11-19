@@ -1,4 +1,5 @@
 export interface LocationFormData {
+  id?: number; 
   name: string;
   commune: string;
   standing: string;
