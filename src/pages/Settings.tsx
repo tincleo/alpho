@@ -359,6 +359,11 @@ function LocationsSettings() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<LocationFormData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    fetchLocations();
+  }, []);
 
   const fetchLocations = async () => {
     try {
@@ -372,10 +377,10 @@ function LocationsSettings() {
     }
   };
 
-  // Only fetch locations once when component mounts
-  useEffect(() => {
-    fetchLocations();
-  }, []);
+  const filteredLocations = locations.filter(location => {
+    const searchLower = searchQuery.toLowerCase();
+    return location.name.toLowerCase().includes(searchLower);
+  });
 
   const handleCreateLocation = async (formData: LocationFormData) => {
     try {
@@ -438,99 +443,116 @@ function LocationsSettings() {
                 setEditingLocation(null);
                 setIsModalOpen(true);
               }}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               New Location
             </button>
           </div>
+          <div className="mt-4">
+            <div className="relative rounded-md shadow-sm max-w-md">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
+                placeholder="Search locations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
-        <div className="p-6">
-          {isLoading ? (
-            <div className="text-center py-4">Loading locations...</div>
-          ) : locations.length === 0 ? (
-            <div className="text-center py-4 text-gray-500">No locations found. Create one to get started.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="w-12 py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">#</th>
-                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Name</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Commune</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Standing</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Neighboring</th>
-                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {locations.map((location, index) => (
-                    <tr key={location.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500 sm:pl-6">{index + 1}</td>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">{location.name}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{location.commune || '-'}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{location.standing || '-'}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {location.neighboring?.length > 0 
-                          ? location.neighboring.join(', ')
-                          : '-'
-                        }
-                      </td>
-                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                        <Popover>
-                          {({ open }) => (
-                            <>
-                              <ActionMenu
-                                location={location}
-                                onEdit={() => {
-                                  setEditingLocation(location);
-                                  setIsModalOpen(true);
-                                }}
-                                onDelete={() => handleDeleteLocation(location.name)}
-                              />
-                              <Transition
-                                show={open}
-                                as={Fragment}
-                                enter="transition ease-out duration-200"
-                                enterFrom="opacity-0 translate-y-1"
-                                enterTo="opacity-100 translate-y-0"
-                                leave="transition ease-in duration-150"
-                                leaveFrom="opacity-100 translate-y-0"
-                                leaveTo="opacity-0 translate-y-1"
-                              >
-                                <Popover.Panel className="absolute z-20 right-0 mt-2 w-72">
-                                  <div className="overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5">
-                                    <div className="relative bg-white p-4">
-                                      <div className="text-sm text-gray-900 mb-3">
-                                        Are you sure you want to delete <span className="font-semibold">{location.name}</span>?
-                                      </div>
-                                      <div className="flex justify-end space-x-2">
-                                        <Popover.Button className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                          Cancel
-                                        </Popover.Button>
-                                        <Popover.Button
-                                          className="rounded-md border border-transparent bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
-                                          onClick={() => handleDeleteLocation(location.name)}
-                                        >
-                                          Delete
-                                        </Popover.Button>
-                                      </div>
+
+        {isLoading ? (
+          <div className="px-6 py-4 text-center text-sm text-gray-500">Loading locations...</div>
+        ) : filteredLocations.length === 0 ? (
+          <div className="px-6 py-4 text-center text-sm text-gray-500">
+            {searchQuery ? 'No locations found matching your search.' : 'No locations found. Create one to get started.'}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-300">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="w-12 py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">#</th>
+                  <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Name</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Commune</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Standing</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Neighboring</th>
+                  <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {filteredLocations.map((location, index) => (
+                  <tr key={location.id}>
+                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500 sm:pl-6">{index + 1}</td>
+                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">{location.name}</td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{location.commune || '-'}</td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{location.standing || '-'}</td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                      {location.neighboring?.length > 0 
+                        ? location.neighboring.join(', ')
+                        : '-'
+                      }
+                    </td>
+                    <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                      <Popover>
+                        {({ open }) => (
+                          <>
+                            <ActionMenu
+                              location={location}
+                              onEdit={() => {
+                                setEditingLocation(location);
+                                setIsModalOpen(true);
+                              }}
+                              onDelete={() => handleDeleteLocation(location.name)}
+                            />
+                            <Transition
+                              show={open}
+                              as={Fragment}
+                              enter="transition ease-out duration-200"
+                              enterFrom="opacity-0 translate-y-1"
+                              enterTo="opacity-100 translate-y-0"
+                              leave="transition ease-in duration-150"
+                              leaveFrom="opacity-100 translate-y-0"
+                              leaveTo="opacity-0 translate-y-1"
+                            >
+                              <Popover.Panel className="absolute z-20 right-0 mt-2 w-72">
+                                <div className="overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5">
+                                  <div className="relative bg-white p-4">
+                                    <div className="text-sm text-gray-900 mb-3">
+                                      Are you sure you want to delete <span className="font-semibold">{location.name}</span>?
+                                    </div>
+                                    <div className="flex justify-end space-x-2">
+                                      <Popover.Button className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                        Cancel
+                                      </Popover.Button>
+                                      <Popover.Button
+                                        className="rounded-md border border-transparent bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+                                        onClick={() => handleDeleteLocation(location.name)}
+                                      >
+                                        Delete
+                                      </Popover.Button>
                                     </div>
                                   </div>
-                                </Popover.Panel>
-                              </Transition>
-                            </>
-                          )}
-                        </Popover>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                                </div>
+                              </Popover.Panel>
+                            </Transition>
+                          </>
+                        )}
+                      </Popover>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <LocationModal
