@@ -1,5 +1,6 @@
 import React, { useState, useEffect, Fragment } from 'react';
 import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import Select from 'react-select';
 import clsx from 'clsx';
 import { supabase } from '../lib/supabase';
 import { LocationRow } from '../lib/api';
@@ -28,6 +29,15 @@ interface LocationFormData {
   name: string;
   commune: string;
   standing: string;
+  neighboring: string[];
+}
+
+interface LocationRow {
+  id: number;
+  name: string;
+  commune: string;
+  standing: string;
+  neighboring: string[];
 }
 
 // Location Modal Component
@@ -35,21 +45,39 @@ function LocationModal({
   isOpen, 
   onClose, 
   onSubmit, 
-  initialData = { name: '', commune: communes[0], standing: standings[0] } 
+  initialData = { name: '', commune: communes[0], standing: standings[0], neighboring: [] },
+  existingLocations = []
 }: { 
   isOpen: boolean; 
   onClose: () => void; 
   onSubmit: (data: LocationFormData) => void;
   initialData?: LocationFormData;
+  existingLocations?: LocationRow[];
 }) {
   const [formData, setFormData] = useState<LocationFormData>(initialData);
 
-  // Reset form data when modal opens with new initial data
   useEffect(() => {
     if (isOpen) {
-      setFormData(initialData);
+      // Ensure neighboring is always an array
+      setFormData({
+        ...initialData,
+        neighboring: initialData.neighboring || []
+      });
     }
   }, [isOpen, initialData]);
+
+  const locationOptions = existingLocations
+    .filter(loc => loc.name !== formData.name) // Exclude current location
+    .map(loc => ({
+      value: loc.name,
+      label: loc.name
+    }));
+
+  const selectedNeighboring = (formData.neighboring || [])
+    .map(name => ({
+      value: name,
+      label: name
+    }));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,6 +162,64 @@ function LocationModal({
                           </option>
                         ))}
                       </select>
+                    </div>
+                    <div>
+                      <label htmlFor="neighboring" className="block text-sm font-medium text-gray-700">
+                        Neighboring
+                      </label>
+                      <div className="mt-1">
+                        <Select
+                          isMulti
+                          closeMenuOnSelect={false}
+                          name="neighboring"
+                          options={locationOptions}
+                          className="basic-multi-select"
+                          classNamePrefix="select"
+                          value={selectedNeighboring}
+                          onChange={(selected) => {
+                            const selectedValues = selected ? selected.map(option => option.value) : [];
+                            setFormData({ ...formData, neighboring: selectedValues });
+                          }}
+                          styles={{
+                            control: (base) => ({
+                              ...base,
+                              borderColor: '#D1D5DB',
+                              '&:hover': {
+                                borderColor: '#9CA3AF'
+                              }
+                            }),
+                            multiValue: (base) => ({
+                              ...base,
+                              backgroundColor: '#E5E7EB',
+                              borderRadius: '0.375rem'
+                            }),
+                            multiValueLabel: (base) => ({
+                              ...base,
+                              color: '#374151'
+                            }),
+                            multiValueRemove: (base) => ({
+                              ...base,
+                              color: '#6B7280',
+                              ':hover': {
+                                backgroundColor: '#D1D5DB',
+                                color: '#1F2937'
+                              }
+                            }),
+                            menu: (base) => ({
+                              ...base,
+                              zIndex: 100,
+                              position: 'relative',
+                              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                            }),
+                            menuPortal: (base) => ({
+                              ...base,
+                              zIndex: 100
+                            })
+                          }}
+                          menuPortalTarget={document.body}
+                          menuPosition="fixed"
+                        />
+                      </div>
                     </div>
                   </div>
                   <div className="mt-6 flex justify-end space-x-3">
@@ -333,6 +419,7 @@ function LocationsSettings() {
       name: location.name,
       commune: location.commune || communes[0],
       standing: location.standing || standings[0],
+      neighboring: location.neighboring || [], // Ensure neighboring is always an array
     });
     setIsModalOpen(true);
   };
@@ -371,6 +458,7 @@ function LocationsSettings() {
                     <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Name</th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Commune</th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Standing</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Neighboring</th>
                     <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
                       <span className="sr-only">Actions</span>
                     </th>
@@ -383,7 +471,13 @@ function LocationsSettings() {
                       <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">{location.name}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{location.commune || '-'}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{location.standing || '-'}</td>
-                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 sm:pr-6">
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        {location.neighboring?.length > 0 
+                          ? location.neighboring.join(', ')
+                          : '-'
+                        }
+                      </td>
+                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                         <Popover>
                           {({ open }) => (
                             <>
@@ -446,7 +540,8 @@ function LocationsSettings() {
           setEditingLocation(null);
         }}
         onSubmit={editingLocation ? handleUpdateLocation : handleCreateLocation}
-        initialData={editingLocation || undefined}
+        initialData={editingLocation || { name: '', commune: communes[0], standing: standings[0], neighboring: [] }}
+        existingLocations={locations}
       />
     </div>
   );
