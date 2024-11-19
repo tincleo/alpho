@@ -247,11 +247,140 @@ function LocationModal({
   );
 }
 
+// Delete Confirmation Modal Component
+function DeleteConfirmationModal({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  locationName 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onConfirm: () => void;
+  locationName: string;
+}) {
+  const [pinCode, setPinCode] = useState('');
+  const [pinError, setPinError] = useState(false);
+
+  const handleDelete = () => {
+    if (pinCode === '2014') {
+      onConfirm();
+      onClose();
+      setPinCode('');
+      setPinError(false);
+    } else {
+      setPinError(true);
+    }
+  };
+
+  return (
+    <Transition appear show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-50" onClose={onClose}>
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-black bg-opacity-25" />
+        </Transition.Child>
+
+        <div className="fixed inset-0 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4 text-center">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
+            >
+              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900">
+                      Delete Location
+                    </Dialog.Title>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500">
+                        Are you sure you want to delete {locationName}? This action cannot be undone.
+                      </p>
+                      <div className="mt-4">
+                        <label htmlFor="pin-code" className="block text-sm font-medium text-gray-700">
+                          Enter PIN code to confirm
+                        </label>
+                        <div className="mt-1">
+                          <input
+                            type="password"
+                            id="pin-code"
+                            maxLength={4}
+                            value={pinCode}
+                            onChange={(e) => {
+                              setPinCode(e.target.value.replace(/[^0-9]/g, ''));
+                              setPinError(false);
+                            }}
+                            className={clsx(
+                              'block w-full rounded-md sm:text-sm',
+                              pinError
+                                ? 'border-red-300 text-red-900 placeholder-red-300 focus:border-red-500 focus:ring-red-500'
+                                : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                            )}
+                          />
+                        </div>
+                        {pinError && (
+                          <p className="mt-2 text-sm text-red-600">
+                            Incorrect PIN code
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-6 flex space-x-4">
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        className="inline-flex justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClose();
+                          setPinCode('');
+                          setPinError(false);
+                        }}
+                        className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </Dialog.Panel>
+            </Transition.Child>
+          </div>
+        </div>
+      </Dialog>
+    </Transition>
+  );
+}
+
 function ActionMenu({ location, onEdit, onDelete }: { 
   location: LocationRow; 
   onEdit: () => void; 
   onDelete: () => void;
 }) {
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
   return (
     <Menu as="div" className="relative inline-block text-left">
       <Menu.Button className="flex items-center text-gray-400 hover:text-gray-600">
@@ -291,65 +420,31 @@ function ActionMenu({ location, onEdit, onDelete }: {
             </Menu.Item>
             <Menu.Item>
               {({ active }) => (
-                <Popover.Button
+                <button
+                  onClick={() => setShowDeleteModal(true)}
                   className={clsx(
                     active ? 'bg-gray-100' : '',
                     'flex w-full px-4 py-2 text-sm text-red-700'
                   )}
                 >
                   <svg className="mr-3 h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0111 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" />
                   </svg>
                   Delete
-                </Popover.Button>
+                </button>
               )}
             </Menu.Item>
           </div>
         </Menu.Items>
       </Transition>
+
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={onDelete}
+        locationName={location.name}
+      />
     </Menu>
-  );
-}
-
-function DeleteConfirmationPopover({ onConfirm, locationName }: { onConfirm: () => void, locationName: string }) {
-  return (
-    <Popover className="relative">
-      <Popover.Button className="text-red-600 hover:text-red-900">
-        Delete
-      </Popover.Button>
-
-      <Transition
-        show={true}
-        as={Fragment}
-        enter="transition ease-out duration-200"
-        enterFrom="opacity-0 translate-y-1"
-        enterTo="opacity-100 translate-y-0"
-        leave="transition ease-in duration-150"
-        leaveFrom="opacity-100 translate-y-0"
-        leaveTo="opacity-0 translate-y-1"
-      >
-        <Popover.Panel className="absolute z-20 right-0 mt-2 w-72">
-          <div className="overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5">
-            <div className="relative bg-white p-4">
-              <div className="text-sm text-gray-900 mb-3">
-                Are you sure you want to delete <span className="font-semibold">{locationName}</span>?
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Popover.Button className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                  Cancel
-                </Popover.Button>
-                <Popover.Button
-                  className="rounded-md border border-transparent bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
-                  onClick={onConfirm}
-                >
-                  Delete
-                </Popover.Button>
-              </div>
-            </div>
-          </div>
-        </Popover.Panel>
-      </Transition>
-    </Popover>
   );
 }
 
@@ -384,13 +479,32 @@ function LocationsSettings() {
 
   const handleCreateLocation = async (formData: LocationFormData) => {
     try {
-      const { error } = await supabase.from('locations').insert([formData]);
+      // Check if we have a valid session
+      const { data: session } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session found');
+      }
+
+      const { data, error } = await supabase
+        .from('locations')
+        .insert([{
+          name: formData.name,
+          commune: formData.commune,
+          standing: formData.standing,
+          neighboring: formData.neighboring
+        }])
+        .select()
+        .single();
+
       if (error) throw error;
+      
       await fetchLocations();
       setIsModalOpen(false);
       setEditingLocation(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating location:', error);
+      // Show error message to user
+      alert(`Error creating location: ${error.message || 'Unknown error occurred'}`);
     }
   };
 
@@ -512,51 +626,11 @@ function LocationsSettings() {
                       }
                     </td>
                     <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                      <Popover>
-                        {({ open }) => (
-                          <>
-                            <ActionMenu
-                              location={location}
-                              onEdit={() => {
-                                setEditingLocation(location);
-                                setIsModalOpen(true);
-                              }}
-                              onDelete={() => handleDeleteLocation(location.name)}
-                            />
-                            <Transition
-                              show={open}
-                              as={Fragment}
-                              enter="transition ease-out duration-200"
-                              enterFrom="opacity-0 translate-y-1"
-                              enterTo="opacity-100 translate-y-0"
-                              leave="transition ease-in duration-150"
-                              leaveFrom="opacity-100 translate-y-0"
-                              leaveTo="opacity-0 translate-y-1"
-                            >
-                              <Popover.Panel className="absolute z-20 right-0 mt-2 w-72">
-                                <div className="overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5">
-                                  <div className="relative bg-white p-4">
-                                    <div className="text-sm text-gray-900 mb-3">
-                                      Are you sure you want to delete <span className="font-semibold">{location.name}</span>?
-                                    </div>
-                                    <div className="flex justify-end space-x-2">
-                                      <Popover.Button className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                        Cancel
-                                      </Popover.Button>
-                                      <Popover.Button
-                                        className="rounded-md border border-transparent bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
-                                        onClick={() => handleDeleteLocation(location.name)}
-                                      >
-                                        Delete
-                                      </Popover.Button>
-                                    </div>
-                                  </div>
-                                </div>
-                              </Popover.Panel>
-                            </Transition>
-                          </>
-                        )}
-                      </Popover>
+                      <ActionMenu
+                        location={location}
+                        onEdit={() => openEditModal(location)}
+                        onDelete={() => handleDeleteLocation(location.name)}
+                      />
                     </td>
                   </tr>
                 ))}
