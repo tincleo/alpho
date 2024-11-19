@@ -431,7 +431,7 @@ function LocationsSettings() {
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Locations</h2>
-              <p className="mt-1 text-sm text-gray-500">Manage your business locations and addresses.</p>
+              <p className="mt-1 text-sm text-gray-500">This page is for managing locations.</p>
             </div>
             <button
               onClick={() => {
