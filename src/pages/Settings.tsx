@@ -364,30 +364,26 @@ function LocationsSettings() {
             <div className="text-center py-4 text-gray-500">No locations found. Create one to get started.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead>
+              <table className="min-w-full divide-y divide-gray-300">
+                <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Name
-                    </th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Commune
-                    </th>
-                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Standing
-                    </th>
-                    <th className="px-6 py-3 bg-gray-50 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
+                    <th scope="col" className="w-12 py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">#</th>
+                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Name</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Commune</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Standing</th>
+                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                      <span className="sr-only">Actions</span>
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {locations.map((location) => (
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {locations.map((location, index) => (
                     <tr key={location.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{location.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{location.commune || '-'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{location.standing || '-'}</td>
-                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500 sm:pl-6">{index + 1}</td>
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">{location.name}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{location.commune || '-'}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{location.standing || '-'}</td>
+                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 sm:pr-6">
                         <Popover>
                           {({ open }) => (
                             <>
