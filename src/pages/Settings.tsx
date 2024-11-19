@@ -458,7 +458,7 @@ function ActionMenu({ location, onEdit, onDelete }: {
                   )}
                 >
                   <svg className="mr-3 h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0111 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" />
                   </svg>
                   Delete
                 </button>
@@ -485,6 +485,20 @@ function LocationsSettings() {
   const [editingLocation, setEditingLocation] = useState<LocationFormData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [visibleColumns, setVisibleColumns] = useState({
+    name: true,
+    commune: true,
+    standing: true,
+    neighboring: true
+  });
+
+  // Column definitions
+  const columns = [
+    { id: 'name', name: 'Name' },
+    { id: 'commune', name: 'Commune' },
+    { id: 'standing', name: 'Standing' },
+    { id: 'neighboring', name: 'Neighboring' }
+  ];
 
   useEffect(() => {
     fetchLocations();
@@ -632,29 +646,107 @@ function LocationsSettings() {
             <table className="min-w-full divide-y divide-gray-300">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="w-12 py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">#</th>
-                  <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Name</th>
-                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Commune</th>
-                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Standing</th>
-                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Neighboring</th>
-                  <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                    <span className="sr-only">Actions</span>
+                  {columns.map(column => (
+                    visibleColumns[column.id as keyof typeof visibleColumns] && (
+                      <th
+                        key={column.id}
+                        scope="col"
+                        className={clsx(
+                          "py-3.5 text-left text-sm font-semibold text-gray-900",
+                          column.id === 'name' ? "pl-4 pr-3 sm:pl-6" : "px-3"
+                        )}
+                      >
+                        {column.name}
+                      </th>
+                    )
+                  ))}
+                  <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6 w-[50px]">
+                    <Menu as="div" className="relative inline-block text-left">
+                      {({ open }) => (
+                        <>
+                          <Menu.Button className="flex items-center text-gray-400 hover:text-gray-600">
+                            <span className="sr-only">Column options</span>
+                            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                            </svg>
+                          </Menu.Button>
+
+                          <Transition
+                            show={open}
+                            as={Fragment}
+                            enter="transition ease-out duration-100"
+                            enterFrom="transform opacity-0 scale-95"
+                            enterTo="transform opacity-100 scale-100"
+                            leave="transition ease-in duration-75"
+                            leaveFrom="transform opacity-100 scale-100"
+                            leaveTo="transform opacity-0 scale-95"
+                          >
+                            <Menu.Items static className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                              <div className="py-1">
+                                {columns.map(column => (
+                                  <Menu.Item key={column.id}>
+                                    {({ active }) => (
+                                      <button
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          setVisibleColumns(prev => ({
+                                            ...prev,
+                                            [column.id]: !prev[column.id as keyof typeof visibleColumns]
+                                          }));
+                                        }}
+                                        className={clsx(
+                                          active ? 'bg-gray-100' : '',
+                                          'flex w-full items-center px-4 py-2 text-sm text-gray-700'
+                                        )}
+                                      >
+                                        <span className="w-5 h-5 mr-3 flex items-center justify-center">
+                                          {visibleColumns[column.id as keyof typeof visibleColumns] && (
+                                            <svg className="h-4 w-4 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                                              <path fillRule="evenodd" clipRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
+                                            </svg>
+                                          )}
+                                        </span>
+                                        {column.name}
+                                      </button>
+                                    )}
+                                  </Menu.Item>
+                                ))}
+                              </div>
+                            </Menu.Items>
+                          </Transition>
+                        </>
+                      )}
+                    </Menu>
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {filteredLocations.map((location, index) => (
+                {filteredLocations.map((location) => (
                   <tr key={location.id}>
-                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500 sm:pl-6">{index + 1}</td>
-                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900">{location.name}</td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{location.commune || '-'}</td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{location.standing || '-'}</td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                      {location.neighboring?.length > 0 
-                        ? location.neighboring.join(', ')
-                        : '-'
-                      }
-                    </td>
+                    {visibleColumns.name && (
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                        {location.name}
+                      </td>
+                    )}
+                    {visibleColumns.commune && (
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        {location.commune}
+                      </td>
+                    )}
+                    {visibleColumns.standing && (
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        {location.standing}
+                      </td>
+                    )}
+                    {visibleColumns.neighboring && (
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        {location.neighboring && location.neighboring.length > 0
+                          ? location.neighboring.join(', ')
+                          : '-'
+                        }
+                      </td>
+                    )}
                     <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                       <ActionMenu
                         location={location}
