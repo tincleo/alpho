@@ -97,7 +97,7 @@ function ServiceCard({
           onEdit();
         }
       }}
-      className={`w-full p-3 rounded-lg border text-left transition-colors ${
+      className={`w-full p-2 rounded-lg border text-left transition-colors ${
         readOnly 
           ? 'border-gray-200 bg-gray-50'
           : 'border-blue-100 bg-blue-50/50 hover:bg-blue-50 hover:border-blue-200'
