@@ -692,7 +692,7 @@ function LocationsSettings() {
                         {location.neighboring && location.neighboring.length > 0
                           ? location.neighboring
                               .map(id => locations.find(loc => loc.id === id)?.name || id)
-                              .join(', ')
+                              .join(' · ')
                           : '-'
                         }
                       </td>
