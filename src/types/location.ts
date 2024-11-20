@@ -1,5 +1,5 @@
 export interface LocationFormData {
-  id?: number; 
+  id?: string; 
   name: string;
   commune: string;
   standing: string;
@@ -7,9 +7,11 @@ export interface LocationFormData {
 }
 
 export interface LocationRow {
-  id: number;
+  id: string;
   name: string;
   commune: string;
   standing: string;
   neighboring: string[];
+  created_at?: string;
+  updated_at?: string;
 }

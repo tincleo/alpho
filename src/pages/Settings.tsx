@@ -76,16 +76,19 @@ function LocationModal({
   };
 
   const locationOptions = existingLocations
-    .filter(loc => loc.name !== formData.name) // Exclude current location
+    .filter(loc => loc.id !== formData.id) // Exclude current location
     .map(loc => ({
-      value: loc.name,
+      value: loc.id,
       label: loc.name
     }));
 
-  const selectedNeighboring = formData.neighboring?.map(name => ({
-    value: name,
-    label: name
-  })) || [];
+  const selectedNeighboring = formData.neighboring?.map(id => {
+    const location = existingLocations.find(loc => loc.id === id);
+    return location ? {
+      value: location.id,
+      label: location.name
+    } : null;
+  }).filter((option): option is { value: string; label: string } => option !== null) || [];
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -200,8 +203,8 @@ function LocationModal({
                         options={locationOptions}
                         value={selectedNeighboring}
                         onChange={(selected) => {
-                          const selectedValues = selected ? selected.map(option => option.value) : [];
-                          setFormData({ ...formData, neighboring: selectedValues });
+                          const selectedIds = selected.map(option => option.value);
+                          setFormData({ ...formData, neighboring: selectedIds });
                         }}
                         className="mt-1"
                         classNamePrefix="select"
@@ -687,7 +690,9 @@ function LocationsSettings() {
                     {visibleColumns.neighboring && (
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                         {location.neighboring && location.neighboring.length > 0
-                          ? location.neighboring.join(', ')
+                          ? location.neighboring
+                              .map(id => locations.find(loc => loc.id === id)?.name || id)
+                              .join(', ')
                           : '-'
                         }
                       </td>

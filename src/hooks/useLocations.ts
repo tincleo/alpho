@@ -32,7 +32,13 @@ export function useLocations() {
                 location.id === payload.new?.id ? { ...location, ...payload.new } : location
               );
             case 'DELETE':
-              return oldData.filter(location => location.id !== payload.old?.id);
+              // Also update neighboring arrays when a location is deleted
+              return oldData
+                .filter(location => location.id !== payload.old?.id)
+                .map(location => ({
+                  ...location,
+                  neighboring: location.neighboring.filter(id => id !== payload.old?.id)
+                }));
             default:
               return oldData;
           }
@@ -59,13 +65,10 @@ export function useLocations() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: LOCATIONS_QUERY_KEY });
-    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, formData }: { id: number; formData: LocationFormData }) => {
+    mutationFn: async ({ id, formData }: { id: string; formData: LocationFormData }) => {
       const { data: session } = await supabase.auth.getSession();
       if (!session) {
         throw new Error('No active session found');
@@ -80,23 +83,28 @@ export function useLocations() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: LOCATIONS_QUERY_KEY });
-    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       const { data: session } = await supabase.auth.getSession();
       if (!session) {
         throw new Error('No active session found');
       }
 
+      // First, remove this location from all neighboring arrays
+      const { error: updateError } = await supabase
+        .from('locations')
+        .update({ 
+          neighboring: supabase.raw(`array_remove(neighboring, '${id}')`) 
+        })
+        .neq('id', id);
+      
+      if (updateError) throw updateError;
+
+      // Then delete the location
       const { error } = await supabase.from('locations').delete().eq('id', id);
       if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: LOCATIONS_QUERY_KEY });
     },
   });
 
