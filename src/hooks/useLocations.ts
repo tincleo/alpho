@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { LocationRow, LocationFormData } from '../types/location';
+import { realtimeManager } from '../lib/realtimeManager';
+import { useEffect } from 'react';
 
 export const LOCATIONS_QUERY_KEY = ['locations'];
 
@@ -15,6 +17,36 @@ export function useLocations() {
       return data || [];
     },
   });
+
+  // Subscribe to real-time updates
+  useEffect(() => {
+    realtimeManager.subscribe('locations-main', {
+      onLocationChange: async (payload) => {
+        // Optimistically update the cache
+        queryClient.setQueryData(LOCATIONS_QUERY_KEY, (oldData: LocationRow[] = []) => {
+          switch (payload.eventType) {
+            case 'INSERT':
+              return [...oldData, payload.new].sort((a, b) => a.name.localeCompare(b.name));
+            case 'UPDATE':
+              return oldData.map(location => 
+                location.id === payload.new?.id ? { ...location, ...payload.new } : location
+              );
+            case 'DELETE':
+              return oldData.filter(location => location.id !== payload.old?.id);
+            default:
+              return oldData;
+          }
+        });
+
+        // Refetch to ensure consistency
+        await queryClient.invalidateQueries({ queryKey: LOCATIONS_QUERY_KEY });
+      }
+    });
+
+    return () => {
+      realtimeManager.unsubscribe('locations-main');
+    };
+  }, [queryClient]);
 
   const createMutation = useMutation({
     mutationFn: async (formData: LocationFormData) => {

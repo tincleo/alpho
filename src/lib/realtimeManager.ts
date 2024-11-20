@@ -6,6 +6,7 @@ import { Database } from './database.types';
 type ProspectRow = Database['public']['Tables']['prospects']['Row'];
 type ServiceRow = Database['public']['Tables']['services']['Row'];
 type ReminderRow = Database['public']['Tables']['reminders']['Row'];
+type LocationRow = Database['public']['Tables']['locations']['Row'];
 
 type RealtimeCallback = {
   onProspectChange?: (payload: RealtimePostgresChangesPayload<{
@@ -20,6 +21,10 @@ type RealtimeCallback = {
     old: ServiceRow | null;
     new: ServiceRow | null;
   }>) => void;
+  onLocationChange?: (payload: RealtimePostgresChangesPayload<{
+    old: LocationRow | null;
+    new: LocationRow | null;
+  }>) => void;
 };
 
 class RealtimeManager {
@@ -30,6 +35,7 @@ class RealtimeManager {
     this.enableRealtimeForTable('prospects');
     this.enableRealtimeForTable('reminders');
     this.enableRealtimeForTable('services');
+    this.enableRealtimeForTable('locations');
   }
 
   private enableRealtimeForTable(table: string) {
@@ -77,6 +83,16 @@ class RealtimeManager {
         const callback = this.callbacks.get(channelId);
         if (callback?.onServiceChange) {
           callback.onServiceChange(payload);
+        }
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'locations',
+      }, (payload) => {
+        const callback = this.callbacks.get(channelId);
+        if (callback?.onLocationChange) {
+          callback.onLocationChange(payload);
         }
       });
 
