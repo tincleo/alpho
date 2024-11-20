@@ -465,8 +465,8 @@ function LocationsSettings() {
   const [searchQuery, setSearchQuery] = useState('');
   const [visibleColumns, setVisibleColumns] = useState({
     name: true,
-    commune: true,
-    standing: true,
+    commune: false,
+    standing: false,
     neighboring: true
   });
 
