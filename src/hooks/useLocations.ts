@@ -9,13 +9,19 @@ export const LOCATIONS_QUERY_KEY = ['locations'];
 export function useLocations() {
   const queryClient = useQueryClient();
 
+  const fetchLocations = async () => {
+    const { data, error } = await supabase
+      .from('location_prospect_counts')
+      .select('*')
+      .order('name');
+
+    if (error) throw error;
+    return data as LocationRow[];
+  };
+
   const { data: locations = [], isLoading, error } = useQuery({
     queryKey: LOCATIONS_QUERY_KEY,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('locations').select('*').order('name');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: fetchLocations,
   });
 
   // Subscribe to real-time updates

@@ -471,7 +471,8 @@ function LocationsSettings() {
     name: true,
     commune: false,
     standing: false,
-    neighboring: true
+    neighboring: true,
+    prospects: true
   });
 
   // Column definitions
@@ -479,7 +480,8 @@ function LocationsSettings() {
     { id: 'name', name: 'Name' },
     { id: 'commune', name: 'Commune' },
     { id: 'standing', name: 'Standing' },
-    { id: 'neighboring', name: 'Neighboring' }
+    { id: 'neighboring', name: 'Neighboring' },
+    { id: 'prospects', name: 'Prospects' }
   ];
 
   const filteredLocations = locations.filter(location => {
@@ -594,10 +596,18 @@ function LocationsSettings() {
                         scope="col"
                         className={clsx(
                           "py-3.5 text-left text-sm font-semibold text-gray-900",
-                          column.id === 'name' ? "pl-4 pr-3 sm:pl-6" : "px-3"
+                          column.id === 'name' ? "pl-4 pr-3 sm:pl-6" : "px-3",
+                          column.id === 'prospects' ? "text-center" : ""
                         )}
                       >
                         {column.name}
+                        {column.id === 'prospects' && (
+                          <div className="flex justify-around mt-1 text-xs text-gray-500 font-normal">
+                            <span>Pending</span>
+                            <span>Confirmed</span>
+                            <span>Completed</span>
+                          </div>
+                        )}
                       </th>
                     )
                   ))}
@@ -695,6 +705,15 @@ function LocationsSettings() {
                               .join(' · ')
                           : '-'
                         }
+                      </td>
+                    )}
+                    {visibleColumns.prospects && (
+                      <td className="whitespace-nowrap px-3 py-4 text-sm">
+                        <div className="flex justify-around">
+                          <span className="text-yellow-600">{location.pending_count}</span>
+                          <span className="text-blue-600">{location.confirmed_count}</span>
+                          <span className="text-green-600">{location.completed_count}</span>
+                        </div>
                       </td>
                     )}
                     <td className="relative whitespace-nowrap py-4 pl-3 pr-4 sm:pr-6 text-right text-sm font-medium">

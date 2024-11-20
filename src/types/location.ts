@@ -14,4 +14,9 @@ export interface LocationRow {
   neighboring: string[];
   created_at?: string;
   updated_at?: string;
+  // Prospect counts
+  pending_count: number;
+  confirmed_count: number;
+  completed_count: number;
+  total_prospects: number;
 }
