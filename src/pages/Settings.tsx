@@ -663,7 +663,11 @@ function LocationsSettings() {
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
                 {filteredLocations.map((location, index) => (
-                  <tr key={location.id}>
+                  <tr 
+                    key={location.id}
+                    onClick={() => openEditModal(location)}
+                    className="hover:bg-gray-50 cursor-pointer"
+                  >
                     {/* Fixed # column */}
                     <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-500 sm:pl-6">
                       {index + 1}
@@ -691,7 +695,10 @@ function LocationsSettings() {
                         }
                       </td>
                     )}
-                    <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                    <td 
+                      className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
+                      onClick={(e) => e.stopPropagation()} // Prevent row click when clicking action menu
+                    >
                       <ActionMenu
                         location={location}
                         onEdit={() => openEditModal(location)}
