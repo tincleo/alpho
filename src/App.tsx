@@ -20,6 +20,7 @@ import Settings from './pages/Settings';
 import Prospects from './pages/Prospects';
 import { realtimeManager } from './lib/realtimeManager';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Plus } from 'lucide-react';
 
 const LOCATIONS: Location[] = [
   'Bastos', 'Mvan', 'Nsam', 'Mvog-Mbi', 'Essos', 
@@ -524,6 +525,15 @@ export default function App() {
               </div>
             } />
           </Routes>
+
+          {/* Floating Action Button - only visible on mobile */}
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="md:hidden fixed right-4 bottom-4 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 z-50"
+            aria-label="Add new prospect"
+          >
+            <Plus className="h-6 w-6" />
+          </button>
 
           {showAddModal && (
             <AddProspectModal

@@ -25,21 +25,6 @@ const communes = [
 
 const standings = ['Moyen standing', 'Haut standing'];
 
-interface LocationFormData {
-  name: string;
-  commune: string;
-  standing: string;
-  neighboring: string[];
-}
-
-interface LocationRow {
-  id: number;
-  name: string;
-  commune: string;
-  standing: string;
-  neighboring: string[];
-}
-
 // Location Modal Component
 function LocationModal({ 
   isOpen, 
@@ -63,7 +48,7 @@ function LocationModal({
   }));
   const [nameError, setNameError] = useState('');
 
-  // Reset form when modal opens/closes or initialData changes
+  // Reset form only when modal opens
   useEffect(() => {
     if (isOpen) {
       setFormData({
@@ -75,7 +60,7 @@ function LocationModal({
       });
       setNameError('');
     }
-  }, [isOpen, initialData]);
+  }, [isOpen]); // Only depend on isOpen, not initialData
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

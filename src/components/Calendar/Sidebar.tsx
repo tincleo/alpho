@@ -76,19 +76,21 @@ export function Sidebar({ selectedServices, onServiceChange, selectedStatuses, o
 
   React.useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setIsExpanded(true);
-      }
+      const isMobile = window.innerWidth < 768;
+      setIsExpanded(!isMobile);
     };
 
+    handleResize(); // Set initial state
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  React.useEffect(() => {
     fetchLocations().then((data: any) => {
       const locations = data.map((location: LocationRow) => location.name).sort((a, b) => a.localeCompare(b));
       setLocations(locations);
       setSelectedLocations(locations);
     });
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const getServiceCount = (service: ServiceType) => {
