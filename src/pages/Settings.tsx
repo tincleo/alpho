@@ -800,11 +800,8 @@ function SettingsLayout() {
     <div className="h-screen flex flex-col">
       {/* Settings Header - Fixed at top */}
       <div className="flex-none bg-white shadow z-10">
-        <div className="px-8 py-6">
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        </div>
         <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-8" aria-label="Settings tabs">
+          <nav className="flex space-x-8 px-8 pt-4" aria-label="Settings tabs">
             {tabs.map((tab) => (
               <Link
                 key={tab.path}
