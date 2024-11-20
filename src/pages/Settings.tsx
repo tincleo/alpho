@@ -525,9 +525,9 @@ function LocationsSettings() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-5 border-b border-gray-200">
+        <div className="px-4 sm:px-6 py-5 border-b border-gray-200">
           <div className="flex space-x-4 items-center">
             <div className="flex-1">
               <div className="relative rounded-md shadow-sm">
@@ -570,9 +570,9 @@ function LocationsSettings() {
         </div>
 
         {isLoading ? (
-          <div className="px-6 py-4 text-center text-sm text-gray-500">Loading locations...</div>
+          <div className="px-4 sm:px-6 py-4 text-center text-sm text-gray-500">Loading locations...</div>
         ) : filteredLocations.length === 0 ? (
-          <div className="px-6 py-4 text-center text-sm text-gray-500">
+          <div className="px-4 sm:px-6 py-4 text-center text-sm text-gray-500">
             {searchQuery ? 'No locations found matching your search.' : 'No locations found. Create one to get started.'}
           </div>
         ) : (
@@ -581,7 +581,7 @@ function LocationsSettings() {
               <thead className="bg-gray-50">
                 <tr>
                   {/* Fixed # column */}
-                  <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 w-12">
+                  <th scope="col" className="py-3.5 pl-4 sm:pl-6 pr-3 text-left text-sm font-semibold text-gray-900 w-12">
                     #
                   </th>
                   {columns.map(column => (
@@ -660,18 +660,17 @@ function LocationsSettings() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {filteredLocations.map((location, index) => (
-                  <tr 
+                {filteredLocations.map((location, idx) => (
+                  <tr
                     key={location.id}
                     onClick={() => openEditModal(location)}
                     className="hover:bg-gray-50 cursor-pointer"
                   >
-                    {/* Fixed # column */}
-                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-500 sm:pl-6">
-                      {index + 1}
+                    <td className="whitespace-nowrap py-4 pl-4 sm:pl-6 pr-3 text-sm text-gray-500">
+                      {idx + 1}
                     </td>
                     {visibleColumns.name && (
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 sm:pl-6 text-sm font-medium text-gray-900">
                         {location.name}
                       </td>
                     )}
@@ -693,10 +692,7 @@ function LocationsSettings() {
                         }
                       </td>
                     )}
-                    <td 
-                      className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6"
-                      onClick={(e) => e.stopPropagation()} // Prevent row click when clicking action menu
-                    >
+                    <td className="relative whitespace-nowrap py-4 pl-3 pr-4 sm:pr-6 text-right text-sm font-medium">
                       <ActionMenu
                         location={location}
                         onEdit={() => openEditModal(location)}
