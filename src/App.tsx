@@ -1,4 +1,5 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { addWeeks, addMonths, subWeeks, subMonths, startOfWeek, startOfMonth, endOfWeek, endOfMonth } from 'date-fns';
 import { CalendarHeader } from './components/Calendar/CalendarHeader';
 import { CalendarGrid } from './components/Calendar/CalendarGrid';
@@ -10,10 +11,15 @@ import { ProspectsSidebar } from './components/Calendar/ProspectsSidebar';
 import { RemindersPane } from './components/Calendar/RemindersPane';
 import { ProspectModal } from './components/Calendar/ProspectModal';
 import { fetchProspects, createProspect, deleteProspect, updateReminder, updateProspect } from './lib/api';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { Toaster } from './components/ui/toaster';
 import './styles/toast.css';
 import { v4 as uuidv4 } from 'uuid';
+import Team from './pages/Team';
+import Settings from './pages/Settings';
+import Prospects from './pages/Prospects';
+import { realtimeManager } from './lib/realtimeManager';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Plus } from 'lucide-react';
 
 const LOCATIONS: Location[] = [
   'Bastos', 'Mvan', 'Nsam', 'Mvog-Mbi', 'Essos', 
@@ -21,6 +27,15 @@ const LOCATIONS: Location[] = [
   'Nkolbisson', 'Olembe', 'Ngousso', 'Messa', 
   'Omnisport', 'Tsinga', 'Etoa-Meki', 'Nlongkak'
 ];
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // Data remains fresh for 5 minutes
+      cacheTime: 1000 * 60 * 30, // Cache is kept for 30 minutes
+    },
+  },
+});
 
 export default function App() {
   const [currentDate, setCurrentDate] = React.useState(new Date(2024, 10, 1));
@@ -65,7 +80,23 @@ export default function App() {
       const data = await fetchProspects(); // Fetch all prospects
       setAllProspects(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
+      let errorMessage = 'An unexpected error occurred';
+      
+      if (err instanceof Error) {
+        if (err.message.includes('FetchError') || err.message.includes('Failed to fetch')) {
+          errorMessage = 'Unable to connect to the server.';
+        } else if (err.message.includes('Invalid API key')) {
+          errorMessage = 'Database authentication failed.';
+        } else if (err.message.includes('timeout')) {
+          errorMessage = 'Server request timed out.';
+        } else if (err.message.includes('supabase')) {
+          errorMessage = 'Unable to connect to the database.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsInitialLoading(false);
     }
@@ -96,6 +127,66 @@ export default function App() {
   React.useEffect(() => {
     loadCalendarData();
   }, [currentDate, viewMode]);
+
+  React.useEffect(() => {
+    // Initial fetch
+    const loadProspects = async () => {
+      const prospects = await fetchProspects();
+      if (prospects) {
+        setAllProspects(prospects);
+        setCalendarProspects(prospects);
+      }
+    };
+    loadProspects();
+
+    // Subscribe to realtime updates
+    realtimeManager.subscribe('calendar-main', {
+      onProspectChange: async (payload) => {
+        // Optimistically update the UI
+        setAllProspects(prevProspects => {
+          switch (payload.eventType) {
+            case 'INSERT':
+              return [...prevProspects, payload.new];
+            case 'UPDATE':
+              return prevProspects.map(p => 
+                p.id === payload.new.id ? { ...p, ...payload.new } : p
+              );
+            case 'DELETE':
+              return prevProspects.filter(p => p.id !== payload.old.id);
+            default:
+              return prevProspects;
+          }
+        });
+
+        // Fetch the latest data to ensure consistency
+        const prospects = await fetchProspects();
+        if (prospects) {
+          setAllProspects(prospects);
+          setCalendarProspects(prospects);
+        }
+      },
+      onReminderChange: async () => {
+        // Fetch the latest data when reminders change
+        const prospects = await fetchProspects();
+        if (prospects) {
+          setAllProspects(prospects);
+          setCalendarProspects(prospects);
+        }
+      },
+      onServiceChange: async () => {
+        // Fetch the latest data when services change
+        const prospects = await fetchProspects();
+        if (prospects) {
+          setAllProspects(prospects);
+          setCalendarProspects(prospects);
+        }
+      }
+    });
+
+    return () => {
+      realtimeManager.unsubscribe('calendar-main');
+    };
+  }, []);
 
   const handleAddProspect = async (newProspect: Omit<Prospect, 'id'>) => {
     const tempId = uuidv4();
@@ -271,15 +362,50 @@ export default function App() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white p-6 rounded-lg shadow-lg">
-          <h2 className="text-red-600 font-medium mb-2">Error</h2>
-          <p className="text-gray-600">{error}</p>
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-6 space-y-6">
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+              <svg
+                className="w-8 h-8 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900">Connection Error</h3>
+              <p className="mt-2 text-gray-600">{error}</p>
+            </div>
+          </div>
           <button
-            onClick={loadAllData}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            onClick={() => {
+              setError(null);
+              loadAllData();
+            }}
+            className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
           >
-            Retry
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            Retry Connection
           </button>
         </div>
       </div>
@@ -287,107 +413,173 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      <Sidebar
-        selectedServices={selectedServices}
-        onServiceChange={setSelectedServices}
-        selectedStatuses={selectedStatuses}
-        onStatusChange={setSelectedStatuses}
-        onLocationChange={setSelectedLocations}
-        prospects={allProspects}
-      />
-      <div className="flex-1 flex flex-col min-w-0">
-        <div className="sticky top-0 z-20">
-          <CalendarHeader
-            currentDate={currentDate}
-            viewMode={viewMode}
-            onPrevious={handlePrevious}
-            onNext={handleNext}
-            onToday={handleToday}
-            onViewModeChange={setViewMode}
-            onAddProspect={() => handleAddProspectClick()}
-            onToggleProspects={() => setShowProspects(!showProspects)}
-            onOpenReminders={() => setShowReminders(true)}
-            remindersCount={totalReminders}
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <div className="min-h-screen bg-gray-100 flex">
+          <Sidebar
+            selectedServices={selectedServices}
+            onServiceChange={setSelectedServices}
+            selectedStatuses={selectedStatuses}
+            onStatusChange={setSelectedStatuses}
+            onLocationChange={setSelectedLocations}
+            prospects={allProspects}
+            onAddProspect={() => setShowAddModal(true)}
           />
-        </div>
-        {viewMode === 'agenda' ? (
-          <AgendaView
-            prospects={filteredAgendaProspects}
+
+          <Routes>
+            <Route path="/" element={
+              <>
+                <div className="flex-1 flex flex-col min-w-0">
+                  <div className="sticky top-0 z-20">
+                    <CalendarHeader
+                      currentDate={currentDate}
+                      viewMode={viewMode}
+                      onPrevious={handlePrevious}
+                      onNext={handleNext}
+                      onToday={handleToday}
+                      onViewModeChange={setViewMode}
+                      onToggleProspects={() => setShowProspects(!showProspects)}
+                      onOpenReminders={() => setShowReminders(true)}
+                      remindersCount={totalReminders}
+                      prospectsCount={allProspects.length}
+                    />
+                  </div>
+                  {viewMode === 'agenda' ? (
+                    <AgendaView
+                      prospects={filteredAgendaProspects}
+                      onUpdateProspect={handleUpdateProspect}
+                      onDeleteProspect={handleDeleteProspect}
+                      onUpdateReminder={handleUpdateReminder}
+                    />
+                  ) : (
+                    <CalendarGrid
+                      currentDate={currentDate}
+                      viewMode={viewMode}
+                      prospects={filteredCalendarProspects}
+                      onAddProspect={handleAddProspectClick}
+                      onUpdateProspect={handleUpdateProspect}
+                      onDeleteProspect={handleDeleteProspect}
+                      onUpdateReminder={handleUpdateReminder}
+                      isLoading={isLoadingCalendar}
+                    />
+                  )}
+                </div>
+              </>
+            } />
+            <Route path="/prospects" element={
+              <div className="flex-1 flex flex-col min-w-0">
+                <div className="sticky top-0 z-20">
+                  <CalendarHeader
+                    currentDate={currentDate}
+                    viewMode={viewMode}
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                    onToday={handleToday}
+                    onViewModeChange={setViewMode}
+                    onToggleProspects={() => setShowProspects(!showProspects)}
+                    onOpenReminders={() => setShowReminders(true)}
+                    remindersCount={totalReminders}
+                    prospectsCount={allProspects.length}
+                  />
+                </div>
+                <Prospects />
+              </div>
+            } />
+            <Route path="/team" element={
+              <div className="flex-1 flex flex-col min-w-0">
+                <div className="sticky top-0 z-20">
+                  <CalendarHeader
+                    currentDate={currentDate}
+                    viewMode={viewMode}
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                    onToday={handleToday}
+                    onViewModeChange={setViewMode}
+                    onToggleProspects={() => setShowProspects(!showProspects)}
+                    onOpenReminders={() => setShowReminders(true)}
+                    remindersCount={totalReminders}
+                    prospectsCount={allProspects.length}
+                  />
+                </div>
+                <Team />
+              </div>
+            } />
+            <Route path="/settings/*" element={
+              <div className="flex-1 flex flex-col min-w-0">
+                <div className="sticky top-0 z-20">
+                  <CalendarHeader
+                    currentDate={currentDate}
+                    viewMode={viewMode}
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                    onToday={handleToday}
+                    onViewModeChange={setViewMode}
+                    onToggleProspects={() => setShowProspects(!showProspects)}
+                    onOpenReminders={() => setShowReminders(true)}
+                    remindersCount={totalReminders}
+                    prospectsCount={allProspects.length}
+                  />
+                </div>
+                <Settings />
+              </div>
+            } />
+          </Routes>
+
+          {/* Floating Action Button - only visible on mobile */}
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="md:hidden fixed right-4 bottom-4 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 z-50"
+            aria-label="Add new prospect"
+          >
+            <Plus className="h-6 w-6" />
+          </button>
+
+          {showAddModal && (
+            <AddProspectModal
+              onClose={() => {
+                setShowAddModal(false);
+                setSelectedDate(undefined);
+              }}
+              onAdd={handleAddProspect}
+              selectedDate={selectedDate}
+            />
+          )}
+
+          <ProspectsSidebar
+            prospects={allProspects}
             onUpdateProspect={handleUpdateProspect}
             onDeleteProspect={handleDeleteProspect}
+            isExpanded={showProspects}
+            onToggle={() => setShowProspects(!showProspects)}
+          />
+
+          <RemindersPane
+            isOpen={showReminders}
+            onClose={() => setShowReminders(false)}
+            prospects={allProspects}
+            onProspectClick={setSelectedProspect}
             onUpdateReminder={handleUpdateReminder}
           />
-        ) : (
-          <CalendarGrid
-            currentDate={currentDate}
-            viewMode={viewMode}
-            prospects={filteredCalendarProspects}
-            onAddProspect={handleAddProspectClick}
-            onUpdateProspect={handleUpdateProspect}
-            onDeleteProspect={handleDeleteProspect}
-            onUpdateReminder={handleUpdateReminder}
-            isLoading={isLoadingCalendar}
-          />
-        )}
-        {showAddModal && (
-          <AddProspectModal
-            onClose={() => {
-              setShowAddModal(false);
-              setSelectedDate(undefined);
-            }}
-            onAdd={handleAddProspect}
-            selectedDate={selectedDate}
-          />
-        )}
-      </div>
-      
-      <ProspectsSidebar
-        prospects={allProspects}
-        onUpdateProspect={handleUpdateProspect}
-        onDeleteProspect={handleDeleteProspect}
-        isExpanded={showProspects}
-        onToggle={() => setShowProspects(!showProspects)}
-      />
 
-      <RemindersPane
-        isOpen={showReminders}
-        onClose={() => setShowReminders(false)}
-        prospects={allProspects}
-        onProspectClick={setSelectedProspect}
-        onUpdateReminder={handleUpdateReminder}
-      />
+          {selectedProspect && (
+            <ProspectModal
+              prospect={selectedProspect}
+              onClose={() => setSelectedProspect(null)}
+              onEdit={handleUpdateProspect}
+              onDelete={handleDeleteProspect}
+              onUpdateReminder={handleUpdateReminder}
+            />
+          )}
 
-      {selectedProspect && (
-        <ProspectModal
-          prospect={selectedProspect}
-          onClose={() => setSelectedProspect(null)}
-          onEdit={handleUpdateProspect}
-          onDelete={handleDeleteProspect}
-          onUpdateReminder={handleUpdateReminder}
-        />
-      )}
+          {isLoading && (
+            <div className="fixed bottom-4 right-4 bg-white px-4 py-2 rounded-lg shadow-lg">
+              <div className="text-sm text-gray-600">Saving changes...</div>
+            </div>
+          )}
 
-      {isLoading && (
-        <div className="fixed bottom-4 right-4 bg-white px-4 py-2 rounded-lg shadow-lg">
-          <div className="text-sm text-gray-600">Saving changes...</div>
+          <Toaster />
         </div>
-      )}
-
-      <ToastContainer
-        position="bottom-center"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="dark"
-        className="toast-container"
-        toastClassName="dark-toast"
-      />
-    </div>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }

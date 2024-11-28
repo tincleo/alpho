@@ -1,17 +1,17 @@
-import React, { useEffect } from 'react';
-import { X, Calendar, UserCheck, ChevronDown, Plus } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, Calendar, Clock, ChevronDown, Plus, Check, CheckCircle, Flag } from 'lucide-react';
 import { format, setHours, setMinutes, parse, addHours } from 'date-fns';
 import { Prospect, ServiceType, ServiceDetails, Location, Priority, Reminder } from '../../types/calendar';
 import { ServiceTypeSelector } from './ServiceTypeSelector';
 import { fetchLocationIdByName, fetchLocations, LocationRow } from '../../lib/api';
 import { toast } from 'react-toastify';
+import Select from 'react-select';
 
 interface AddProspectModalProps {
   onClose: () => void;
   onAdd: (prospect: Omit<Prospect, 'id'>) => Promise<void>;
   selectedDate?: Date;
   initialProspect?: Prospect;
-  initialType?: 'prospect' | 'follow-up';
   hideServices?: boolean;
   prefillData?: Omit<Prospect, 'id'>;
 }
@@ -38,7 +38,20 @@ const formatPhoneNumber = (value: string) => {
   return `${numbers.slice(0, 3)} ${numbers.slice(3, 5)} ${numbers.slice(5, 7)} ${numbers.slice(7)}`;
 };
 
-export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect, initialType, hideServices = false, prefillData }: AddProspectModalProps) {
+const statusColors = {
+  pending: 'bg-yellow-100 text-yellow-600',
+  confirmed: 'bg-green-100 text-green-600',
+  completed: 'bg-blue-100 text-blue-600',
+  cancelled: 'bg-red-100 text-red-600',
+};
+
+const priorityColors = {
+  low: 'bg-green-100 text-green-600',
+  medium: 'bg-yellow-100 text-yellow-600',
+  high: 'bg-red-100 text-red-600',
+};
+
+export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect, hideServices = false, prefillData }: AddProspectModalProps) {
   const [selectedServices, setSelectedServices] = React.useState<ServiceInstance[]>(
     initialProspect?.services.map(s => ({
       id: s.id,
@@ -52,20 +65,27 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
       [s.id]: s.details[s.type]
     }), {}) ?? {}
   );
+  const [reminders, setReminders] = React.useState<Reminder[]>(
+    initialProspect?.reminders || []
+  );
   const [formData, setFormData] = React.useState({
     location: prefillData?.location ?? initialProspect?.location ?? '',
     address: prefillData?.address ?? initialProspect?.address ?? '',
     phone: prefillData?.phone ?? initialProspect?.phone ?? '',
-    date: prefillData?.datetime
-      ? format(new Date(prefillData.datetime), 'yyyy-MM-dd')
-      : selectedDate 
-        ? format(selectedDate, 'yyyy-MM-dd')
-        : format(new Date(), 'yyyy-MM-dd'),
-    startTime: prefillData?.datetime
-      ? format(new Date(prefillData.datetime), 'HH:mm')
-      : '09:00',
-    endTime: prefillData?.endTime
-      ? format(new Date(prefillData.endTime), 'HH:mm')
+    date: initialProspect?.datetime
+      ? format(new Date(initialProspect.datetime), 'yyyy-MM-dd')
+      : prefillData?.datetime
+        ? format(new Date(prefillData.datetime), 'yyyy-MM-dd')
+        : selectedDate 
+          ? format(selectedDate, 'yyyy-MM-dd')
+          : format(new Date(), 'yyyy-MM-dd'),
+    startTime: initialProspect?.datetime
+      ? format(new Date(initialProspect.datetime), 'HH:mm')
+      : prefillData?.datetime
+        ? format(new Date(prefillData.datetime), 'HH:mm')
+        : '09:00',
+    endTime: initialProspect?.datetime
+      ? format(addHours(new Date(initialProspect.datetime), 2), 'HH:mm')
       : '11:00',
     notes: prefillData?.notes ?? initialProspect?.notes ?? '',
     status: prefillData?.status ?? initialProspect?.status ?? 'pending',
@@ -73,27 +93,57 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
     priority: prefillData?.priority ?? initialProspect?.priority ?? 'medium',
     name: prefillData?.name ?? initialProspect?.name ?? '',
   });
-  const [prospectType, setProspectType] = React.useState<'prospect' | 'follow-up'>(
-    initialType ?? (selectedDate ? 'prospect' : 'follow-up')
-  );
   const [showNotes, setShowNotes] = React.useState(!!initialProspect?.notes);
-  const [locationSearch, setLocationSearch] = React.useState(initialProspect?.location || '');
-  const [showLocationDropdown, setShowLocationDropdown] = React.useState(false);
-  const [reminders] = React.useState<Reminder[]>(initialProspect?.reminders || []);
   const [locations, setLocations] = React.useState<Location[]>([]);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
+  const statusDropdownRef = React.useRef<HTMLDivElement>(null);
+  const priorityDropdownRef = React.useRef<HTMLDivElement>(null);
 
-   useEffect(() => {
-    
-     fetchLocations().then((data: any) =>
-       setLocations(data.map((location: LocationRow) => location.name))
-     );
-   }, []);
+  const STATUS_OPTIONS = ['pending', 'confirmed', 'completed', 'cancelled'] as const;
+  const PRIORITY_OPTIONS = ['low', 'medium', 'high'] as const;
 
-  const filteredLocations = React.useMemo(() => {
-    return locations.filter((location) =>
-      location.toLowerCase().includes(locationSearch.toLowerCase())
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        statusDropdownRef.current &&
+        !statusDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowStatusDropdown(false);
+      }
+      if (
+        priorityDropdownRef.current &&
+        !priorityDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowPriorityDropdown(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    fetchLocations().then((data: any) =>
+      setLocations(data.map((location: LocationRow) => location.name))
     );
-  }, [locationSearch]);
+  }, []);
+
+  const locationOptions = React.useMemo(() => 
+    locations
+      .sort((a, b) => a.localeCompare(b))
+      .map(location => ({
+        value: location,
+        label: location
+      }))
+  , [locations]);
+
+  const selectedLocationOption = React.useMemo(() => 
+    formData.location ? {
+      value: formData.location,
+      label: formData.location
+    } : null
+  , [formData.location]);
 
   const handleServiceToggle = (service: ServiceInstance) => {
     if (selectedServices.some(s => s.id === service.id)) {
@@ -131,16 +181,6 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
     }));
   };
 
-  const handleEndTimeChange = (newEndTime: string) => {
-    const endDate = parse(newEndTime, 'HH:mm', new Date());
-    const startDate = addHours(endDate, -2);
-    setFormData(prev => ({
-      ...prev,
-      startTime: format(startDate, 'HH:mm'),
-      endTime: newEndTime
-    }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -149,13 +189,13 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
       return;
     }
 
-    if (prospectType === 'prospect' && !formData.date) {
-      toast.error('Prospect date is required for confirmed prospects');
+    if (!formData.phone) {
+      toast.error('Please enter a phone number');
       return;
     }
 
-    if (formData.status === 'confirmed' && (!formData.startTime || !formData.endTime)) {
-      toast.error('Start and end time are required for confirmed prospects');
+    if (formData.status === 'confirmed' && !formData.startTime) {
+      toast.error('Start time is required for confirmed prospects');
       return;
     }
 
@@ -173,42 +213,39 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
       }
     }));
 
+    const startDateTime = parse(formData.startTime, 'HH:mm', new Date(formData.date));
+
     const location = await fetchLocationIdByName(formData.location);
-    const newProspect = {
+    const prospect = {
       services,
       location_id: location?.id,
       location: location?.name,
       address: formData.address,
       phone: formData.phone,
-      datetime:
-        prospectType === "prospect"
-          ? new Date(`${formData.date}T${formData.startTime}`).toISOString()
-          : new Date().toISOString(),
+      datetime: startDateTime.toISOString(),
       notes: formData.notes,
       status: formData.status,
       isAllDay: formData.isAllDay,
       priority: formData.priority,
       name: formData.name,
-      reminders,
+      reminders: initialProspect ? reminders : [], // Keep existing reminders when editing
     };
 
     // Close the modal immediately
     onClose();
 
-    // Use toast.promise to track the prospect creation
-    toast.promise(
-      onAdd(newProspect),
-      {
-        pending: 'Creating prospect...',
-        success: 'Prospect created 👌',
-        error: {
-          render({data}) {
-            // When the promise rejects, data will contain the error
-            return `Failed to create prospect: ${data.message}`;
-          }
-        }
-      }
-    );
+    // Use toast.promise to track the prospect creation/update
+    toast.promise(onAdd(prospect), {
+      pending: initialProspect ? "Updating prospect..." : "Creating prospect...",
+      success: initialProspect ? "Prospect updated 👌" : "Prospect created 👌",
+      error: {
+        render({ data }) {
+          // When the promise rejects, data will contain the error
+          const action = initialProspect ? "update" : "create";
+          return `Failed to ${action} prospect: ${data.message}`;
+        },
+      },
+    });
   };
 
   // Helper function to generate UUID
@@ -222,146 +259,143 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-bold text-gray-900">
-            {initialProspect ? 'Edit Prospect' : 'New Prospect'}
-          </h2>
+      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-3 border-b">
+          <div className="flex items-center gap-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {initialProspect ? 'Edit Prospect' : 'New Prospect'}
+            </h2>
+          </div>
+          <div className="flex gap-2">
+            <div className="relative" ref={statusDropdownRef}>
+              <button
+                onClick={() => {
+                  setShowStatusDropdown(!showStatusDropdown);
+                  setShowPriorityDropdown(false);
+                }}
+                className={`px-2.5 py-1 rounded-full text-sm ${
+                  statusColors[formData.status]
+                } flex items-center gap-1 hover:ring-2 hover:ring-gray-200 transition-all`}
+              >
+                {formData.status === 'pending' && <Clock className="w-3 h-3" />}
+                {formData.status === 'confirmed' && <Check className="w-3 h-3" />}
+                {formData.status === 'completed' && <CheckCircle className="w-3 h-3" />}
+                {formData.status === 'cancelled' && <X className="w-3 h-3" />}
+                {formData.status.charAt(0).toUpperCase() +
+                  formData.status.slice(1)}
+                <ChevronDown className="w-3 h-3" />
+              </button>
+              {showStatusDropdown && (
+                <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
+                  {STATUS_OPTIONS.map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => 
+                        setFormData(prev => ({
+                          ...prev,
+                          status
+                        }))
+                      }
+                      className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2
+                        ${formData.status === status ? 'bg-gray-50' : ''}`}
+                    >
+                      {status === 'pending' && <Clock className="w-3 h-3" />}
+                      {status === 'confirmed' && <Check className="w-3 h-3" />}
+                      {status === 'completed' && <CheckCircle className="w-3 h-3" />}
+                      {status === 'cancelled' && <X className="w-3 h-3" />}
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="relative" ref={priorityDropdownRef}>
+              <button
+                onClick={() => {
+                  setShowPriorityDropdown(!showPriorityDropdown);
+                  setShowStatusDropdown(false);
+                }}
+                className={`px-2.5 py-1 rounded-full text-sm ${
+                  priorityColors[formData.priority]
+                } hover:ring-2 hover:ring-gray-200 transition-all`}
+              >
+                <div className="flex items-center gap-1">
+                  <Flag className="w-3 h-3" />
+                  {formData.priority.charAt(0).toUpperCase() +
+                    formData.priority.slice(1)}
+                  <ChevronDown className="w-3 h-3" />
+                </div>
+              </button>
+              {showPriorityDropdown && (
+                <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
+                  {PRIORITY_OPTIONS.map((priority) => (
+                    <button
+                      key={priority}
+                      onClick={() => 
+                        setFormData(prev => ({
+                          ...prev,
+                          priority
+                        }))
+                      }
+                      className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2
+                        ${formData.priority === priority ? 'bg-gray-50' : ''}`}
+                    >
+                      <Flag className="w-3 h-3" />
+                      {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="text-gray-400 hover:text-gray-500"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Type
-              </label>
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={() => setProspectType('prospect')}
-                  className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-all ${
-                    prospectType === 'prospect'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  <Calendar className="w-4 h-4" />
-                  <span className="font-medium">Prospect</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setProspectType('follow-up')}
-                  className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-all ${
-                    prospectType === 'follow-up'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  <UserCheck className="w-4 h-4" />
-                  <span className="font-medium">Follow-up</span>
-                </button>
-              </div>
-            </div>
-
+          <form className="space-y-4 text-sm">
             {!hideServices && (
-              <ServiceTypeSelector
-                selectedServices={selectedServices}
-                serviceDetails={serviceDetails}
-                onToggleService={handleServiceToggle}
-                onUpdateDetails={handleServiceDetailsUpdate}
-              />
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Prospect Name
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={formData.phone}
-                  onChange={(e) => {
-                    const formatted = formatPhoneNumber(e.target.value);
-                    setFormData((prev) => ({ ...prev, phone: formatted }));
-                  }}
-                  placeholder="699 88 77 66"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Location <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={locationSearch}
-                    onChange={(e) => {
-                      setLocationSearch(e.target.value);
-                      setShowLocationDropdown(true);
-                    }}
-                    onFocus={() => setShowLocationDropdown(true)}
-                    placeholder="Select a location..."
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8 ${
-                      !formData.location ? 'border-red-300' : ''
-                    }`}
-                    required
+              <div className="border rounded-lg overflow-visible">
+                <div className="p-4">
+                  <ServiceTypeSelector
+                    isAddProspectModal={true}
+                    selectedServices={selectedServices}
+                    serviceDetails={serviceDetails}
+                    onToggleService={handleServiceToggle}
+                    onUpdateDetails={handleServiceDetailsUpdate}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowLocationDropdown(!showLocationDropdown)}
-                    className="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600"
-                  >
-                    <ChevronDown className="w-4 h-4" />
-                  </button>
                 </div>
-                {showLocationDropdown && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                    {filteredLocations.map((location) => (
-                      <button
-                        key={location}
-                        type="button"
-                        onClick={() => {
-                          setFormData(prev => ({ ...prev, location }));
-                          setLocationSearch(location);
-                          setShowLocationDropdown(false);
-                        }}
-                        className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 ${
-                          location === formData.location ? 'bg-blue-50 text-blue-600' : ''
-                        }`}
-                      >
-                        {location}
-                      </button>
-                    ))}
-                  </div>
-                )}
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block font-medium text-gray-700 mb-1">
+                  Location
+                </label>
+                <Select
+                  value={selectedLocationOption}
+                  onChange={(option) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      location: option?.value || '',
+                    }))
+                  }
+                  options={locationOptions}
+                  className="text-sm"
+                  classNames={{
+                    control: () => "!min-h-[38px]",
+                  }}
+                  placeholder="Select location..."
+                  isClearable
+                />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block font-medium text-gray-700 mb-1">
                   Address
                 </label>
                 <input
@@ -370,10 +404,104 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, address: e.target.value }))
                   }
-                  placeholder="Enter precise address"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  placeholder="Enter address..."
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block font-medium text-gray-700 mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  placeholder="Enter name..."
+                />
+              </div>
+
+              <div>
+                <label className="block font-medium text-gray-700 mb-1">
+                  Phone <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      phone: formatPhoneNumber(e.target.value),
+                    }))
+                  }
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block font-medium text-gray-700 mb-1">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={formData.date}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, date: e.target.value }))
+                  }
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm cursor-pointer"
+                />
+              </div>
+              <div>
+                <label className="block font-medium text-gray-700 mb-1">
+                  Start Time
+                </label>
+                <select
+                  value={formData.startTime}
+                  onChange={(e) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      startTime: e.target.value,
+                    }));
+                  }}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                >
+                  {TIME_OPTIONS.map((time) => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="block font-medium text-gray-700">
+                All Day
+              </label>
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData((prev) => ({ ...prev, isAllDay: !prev.isAllDay }))
+                }
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  formData.isAllDay ? 'bg-blue-600' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    formData.isAllDay ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
 
             <div>
@@ -388,7 +516,7 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
                 </button>
               ) : (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block font-medium text-gray-700 mb-1">
                     Notes
                   </label>
                   <textarea
@@ -398,7 +526,7 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
                     }
                     rows={3}
                     placeholder="Additional notes about the prospect"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   />
                 </div>
               )}
@@ -406,18 +534,18 @@ export function AddProspectModal({ onClose, onAdd, selectedDate, initialProspect
           </form>
         </div>
 
-        <div className="flex justify-end gap-2 p-6 border-t">
+        <div className="flex justify-end gap-2 py-3 px-6 border-t">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             onClick={handleSubmit}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+            className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
           >
             {initialProspect ? 'Save Changes' : 'Create Prospect'}
           </button>

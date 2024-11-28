@@ -1,0 +1,38 @@
+.ag-theme-alpine {
+  --ag-font-family: inherit;
+  --ag-font-size: 13px;
+  --ag-cell-horizontal-padding: 1rem;
+  --ag-header-height: 48px;
+  --ag-row-height: 48px;
+  --ag-header-foreground-color: #374151;
+  --ag-header-background-color: #f9fafb;
+  --ag-odd-row-background-color: #ffffff;
+  --ag-row-hover-color: #f3f4f6;
+  --ag-selected-row-background-color: #eff6ff;
+  --ag-row-border-color: #e5e7eb;
+  --ag-header-column-separator-color: #e5e7eb;
+  --ag-header-column-resize-handle-color: #9ca3af;
+}
+
+.ag-theme-alpine .ag-header-cell {
+  font-weight: 600;
+}
+
+.ag-theme-alpine .ag-cell {
+  display: flex;
+  align-items: center;
+}
+
+.ag-theme-alpine .ag-row {
+  border-bottom-style: solid;
+  border-bottom-width: 1px;
+  border-bottom-color: var(--ag-row-border-color);
+}
+
+.ag-theme-alpine .ag-row-hover {
+  background-color: var(--ag-row-hover-color) !important;
+}
+
+.ag-theme-alpine .ag-row-selected {
+  background-color: var(--ag-selected-row-background-color) !important;
+}

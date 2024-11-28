@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Bell, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Bell, Users, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { ViewMode } from '../../types/calendar';
 
@@ -10,10 +10,10 @@ interface CalendarHeaderProps {
   onNext: () => void;
   onToday: () => void;
   onViewModeChange: (mode: ViewMode) => void;
-  onAddProspect: () => void;
   onToggleProspects: () => void;
   onOpenReminders: () => void;
   remindersCount: number;
+  prospectsCount: number;
 }
 
 export function CalendarHeader({
@@ -23,12 +23,25 @@ export function CalendarHeader({
   onNext,
   onToday,
   onViewModeChange,
-  onAddProspect,
   onToggleProspects,
   onOpenReminders,
   remindersCount,
+  prospectsCount,
 }: CalendarHeaderProps) {
   const [showViewSelector, setShowViewSelector] = React.useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
+  const userMenuRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <div className="flex flex-col gap-4 p-4 bg-white border-b">
@@ -128,33 +141,65 @@ export function CalendarHeader({
           </div>
 
           <button
-            onClick={onOpenReminders}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative"
-            aria-label="View Reminders"
+            onClick={onToggleProspects}
+            className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="View Prospects"
           >
-            <Bell className="w-5 h-5 text-gray-600" />
-            {remindersCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center">
-                {remindersCount}
+            <Users className="w-5 h-5" />
+            {prospectsCount > 0 && (
+              <span className="absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                {prospectsCount}
               </span>
             )}
           </button>
 
           <button
-            onClick={onToggleProspects}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            aria-label="View Prospects"
+            onClick={onOpenReminders}
+            className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <Users className="w-5 h-5" />
+            <Bell className="w-5 h-5" />
+            {remindersCount > 0 && (
+              <span className="absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                {remindersCount}
+              </span>
+            )}
           </button>
 
-          <button
-            onClick={onAddProspect}
-            className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
-            aria-label="Add Prospect"
-          >
-            <Plus className="w-5 h-5" />
-          </button>
+          {/* User Avatar and Menu */}
+          <div className="relative" ref={userMenuRef}>
+            <button
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-white" />
+              </div>
+            </button>
+
+            {/* Dropdown Menu */}
+            {isUserMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                <button
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  onClick={() => setIsUserMenuOpen(false)}
+                >
+                  Profile
+                </button>
+                <button
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  onClick={() => setIsUserMenuOpen(false)}
+                >
+                  Help
+                </button>
+                <button
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  onClick={() => setIsUserMenuOpen(false)}
+                >
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

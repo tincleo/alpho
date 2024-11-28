@@ -1,13 +1,14 @@
 import React from 'react';
-import { ChevronDown, ChevronUp, Plus, X, Bell, Check } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, X, Bell, Check, Loader2 } from 'lucide-react';
 import { Reminder } from '../../types/calendar';
 import { format, startOfDay, isBefore, isSameDay, differenceInDays } from 'date-fns';
 import { updateReminder } from '../../lib/api';
+import { toast } from 'react-toastify';
 
 interface RemindersAccordionProps {
   reminders: Reminder[];
   prospectId: string;
-  onUpdateReminder: (reminders: Reminder[]) => void;
+  onUpdateReminder: (prospectId: string, reminderId: string, completed: boolean) => Promise<void>;
   onChange: (reminders: Reminder[]) => void;
   onAddReminder: (reminders: Reminder[]) => void;
   handleDeleteReminder: (reminderId: string) => void;
@@ -24,15 +25,14 @@ export function RemindersAccordion({
   onUpdateReminder,
   handleDeleteReminder,
 }: RemindersAccordionProps) {
-  const [localReminders, setLocalReminders] =
-    React.useState<Reminder[]>(reminders);
+  const [localReminders, setLocalReminders] = React.useState<Reminder[]>(reminders);
   const [isOpen, setIsOpen] = React.useState(false);
   const [showDatePicker, setShowDatePicker] = React.useState(false);
-  const [selectedDate, setSelectedDate] = React.useState(
-    format(new Date(), "yyyy-MM-dd")
-  );
+  const [selectedDate, setSelectedDate] = React.useState(format(new Date(), "yyyy-MM-dd"));
   const [note, setNote] = React.useState("");
+  const [loadingReminders, setLoadingReminders] = React.useState<Record<string, boolean>>({});
   const dateInputRef = React.useRef<HTMLInputElement>(null);
+  const updateQueue = React.useRef<Map<string, Promise<void>>>(new Map());
 
   // Keep local reminders in sync with prop reminders
   React.useEffect(() => {
@@ -87,8 +87,9 @@ export function RemindersAccordion({
     );
 
     if (hasExistingReminder) {
-      alert(
-        "A reminder already exists for this date. Please choose a different date."
+      toast.error(
+        "A reminder already exists for this date. Please choose a different date.",
+        { position: 'bottom-right' }
       );
       return;
     }
@@ -99,6 +100,8 @@ export function RemindersAccordion({
       datetime: selectedDateTime.toISOString(),
       note: note.trim(),
       completed: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
     // Add new reminder and sort
@@ -106,48 +109,85 @@ export function RemindersAccordion({
       (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
     );
 
+    setLocalReminders(updatedReminders);
     onChange(updatedReminders);
     onAddReminder(newReminder);
     setShowDatePicker(false);
     setNote("");
+    
+    toast.success('Reminder added', { position: 'bottom-right' });
   };
 
   const deleteReminder = (reminderId: string) => {
     handleDeleteReminder(reminderId);
     onChange(localReminders.filter((reminder) => reminder.id !== reminderId));
+    toast.success('Reminder deleted', { position: 'bottom-right' });
   };
 
   const handleComplete = async (reminder: Reminder, e: React.MouseEvent) => {
     e.stopPropagation();
 
-    // Don't try to update temporary reminders in the database
-    if (reminder.id.includes("temp_")) {
-      setLocalReminders((prev) =>
-        prev.map((r) =>
-          r.id === reminder.id ? { ...r, completed: !r.completed } : r
-        )
-      );
-      return;
-    }
+    // Don't allow updates if already loading
+    if (loadingReminders[reminder.id]) return;
 
     try {
-      // Update local state immediately
-      setLocalReminders((prev) =>
-        prev.map((r) =>
-          r.id === reminder.id ? { ...r, completed: !r.completed } : r
-        )
-      );
+      // Set loading state
+      setLoadingReminders(prev => ({ ...prev, [reminder.id]: true }));
 
-      // Update in database
-      await updateReminder(prospectId, reminder.id, !reminder.completed);
-    } catch (error) {
-      // Revert local state on error
-      setLocalReminders((prev) =>
-        prev.map((r) =>
-          r.id === reminder.id ? { ...r, completed: reminder.completed } : r
-        )
+      // Update local state immediately
+      const newCompleted = !reminder.completed;
+      const updatedReminders = localReminders.map(r =>
+        r.id === reminder.id ? { ...r, completed: newCompleted } : r
       );
-      console.error("Failed to update reminder:", error);
+      setLocalReminders(updatedReminders);
+
+      // Create a new update promise
+      const updatePromise = (async () => {
+        try {
+          // Wait for any previous update for this reminder to complete
+          const previousUpdate = updateQueue.current.get(reminder.id);
+          if (previousUpdate) {
+            await previousUpdate;
+          }
+
+          // Update in database through parent component
+          await onUpdateReminder(prospectId, reminder.id, newCompleted);
+
+          // Show success toast
+          toast.success(
+            newCompleted ? 'Reminder marked as completed' : 'Reminder marked as pending',
+            { position: 'bottom-right' }
+          );
+        } catch (error) {
+          // Revert local state on error
+          setLocalReminders((prev) =>
+            prev.map((r) =>
+              r.id === reminder.id ? { ...r, completed: reminder.completed } : r
+            )
+          );
+          console.error("Failed to update reminder:", error);
+          toast.error('Failed to update reminder status', { position: 'bottom-right' });
+          throw error;
+        } finally {
+          // Remove this update from the queue
+          updateQueue.current.delete(reminder.id);
+          // Clear loading state
+          setLoadingReminders(prev => {
+            const newState = { ...prev };
+            delete newState[reminder.id];
+            return newState;
+          });
+        }
+      })();
+
+      // Add the promise to the queue
+      updateQueue.current.set(reminder.id, updatePromise);
+
+      // Wait for this update to complete
+      await updatePromise;
+    } catch (error) {
+      // Error is already handled in the inner try-catch
+      console.error("Error in handleComplete:", error);
     }
   };
 
@@ -221,13 +261,18 @@ export function RemindersAccordion({
                     <button
                       type="button"
                       onClick={(e) => handleComplete(reminder, e)}
+                      disabled={loadingReminders[reminder.id]}
                       className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
                         reminder.completed
                           ? "bg-blue-500 border-blue-500 text-white"
                           : "border-gray-300 hover:border-blue-500"
-                      }`}
+                      } ${loadingReminders[reminder.id] ? 'cursor-not-allowed opacity-50' : ''}`}
                     >
-                      {reminder.completed && <Check className="w-3 h-3" />}
+                      {loadingReminders[reminder.id] ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : reminder.completed ? (
+                        <Check className="w-3 h-3" />
+                      ) : null}
                     </button>
 
                     <div className="flex-1 min-w-0">

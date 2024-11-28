@@ -11,6 +11,7 @@ interface ProspectPreviewProps {
   onDragEnd?: () => void;
   view?: 'week' | 'month' | 'agenda';
   compact?: boolean;
+  showReminders?: boolean;
 }
 
 const SERVICE_TYPES: Record<string, string> = {
@@ -26,7 +27,8 @@ export function ProspectPreview({
   draggable = true,
   onDragStart,
   onDragEnd,
-  view = 'month'
+  view = 'month',
+  showReminders = true
 }: ProspectPreviewProps) {
   const statusColors = {
     pending: 'bg-yellow-500',
@@ -92,7 +94,7 @@ export function ProspectPreview({
     return '';
   };
 
-  if (view === 'week') {
+  if (view === 'week' || view === 'month') {
     return (
       <div
         onClick={handleClick}
@@ -101,7 +103,12 @@ export function ProspectPreview({
         onDragEnd={onDragEnd}
         className={getBaseClasses()}
       >
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-0.5 relative">
+          {showReminders && prospect.reminders.length > 0 && (
+            <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] min-w-[16px] h-4 rounded-full flex items-center justify-center px-1">
+              {prospect.reminders.length}
+            </div>
+          )}
           <div className="flex items-center gap-1">
             {prospect.saveStatus === 'saving' && (
               <Loader2 className="w-3 h-3 animate-spin text-gray-400" />
@@ -120,34 +127,6 @@ export function ProspectPreview({
     );
   }
 
-  if (view === 'month') {
-    return (
-      <div
-        onClick={handleClick}
-        draggable={!prospect.saveStatus}
-        onDragStart={handleDragStart}
-        onDragEnd={onDragEnd}
-        className={getBaseClasses()}
-      >
-        <div className="flex items-center gap-1">
-          {prospect.saveStatus === 'saving' && (
-            <Loader2 className="w-3 h-3 animate-spin text-gray-400" />
-          )}
-          <span className={`w-1.5 h-1.5 rounded-full ${statusColors[prospect.status]}`} />
-          <span className="font-medium truncate flex-1">
-            {SERVICE_TYPES[prospect.services[0].type]}
-            {prospect.services.length > 1 && ` +${prospect.services.length - 1}`}
-          </span>
-          {!prospect.isAllDay && (
-            <span className="text-gray-500 shrink-0">
-              {format(new Date(prospect.datetime), 'HH:mm')}
-            </span>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   if (view === 'agenda') {
     return (
       <div
@@ -157,7 +136,12 @@ export function ProspectPreview({
         onDragEnd={onDragEnd}
         className={getBaseClasses()}
       >
-        <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3">
+        <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3 relative">
+          {showReminders && prospect.reminders.length > 0 && (
+            <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs min-w-[18px] h-5 rounded-full flex items-center justify-center px-1">
+              {prospect.reminders.length}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2 min-w-0">

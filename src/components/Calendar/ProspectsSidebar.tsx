@@ -46,17 +46,22 @@ export function ProspectsSidebar({
   }, [prospects]);
 
   const filteredProspects = React.useMemo(() => {
+    if (!prospects) return [];
     const query = searchQuery.toLowerCase();
     return prospects.filter(prospect => {
+      if (!prospect || !prospect.services) return false;
+      
       const matchesSearch = 
-        prospect.services.some(service => service.type.toLowerCase().includes(query)) ||
-        prospect.location.toLowerCase().includes(query) ||
+        (prospect.services && Array.isArray(prospect.services) && prospect.services.some(service => 
+          service && service.type && service.type.toLowerCase().includes(query)
+        )) ||
+        (prospect.location && prospect.location.toLowerCase().includes(query)) ||
         (prospect.address?.toLowerCase().includes(query) || false) ||
-        prospect.phone.includes(query) ||
+        (prospect.phone && prospect.phone.includes(query)) ||
         (prospect.name?.toLowerCase().includes(query) || false);
 
-      const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(prospect.status);
-      const matchesPriority = selectedPriorities.length === 0 || selectedPriorities.includes(prospect.priority);
+      const matchesStatus = selectedStatuses.length === 0 || (prospect.status && selectedStatuses.includes(prospect.status));
+      const matchesPriority = selectedPriorities.length === 0 || (prospect.priority && selectedPriorities.includes(prospect.priority));
 
       return matchesSearch && matchesStatus && matchesPriority;
     });
