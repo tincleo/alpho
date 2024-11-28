@@ -18,8 +18,12 @@ function generateUUID() {
 
 // Fetch location by ID from Supabase
 const fetchLocationById = async (
-  locationId: string
+  locationId: string | null
 ): Promise<LocationRow | null> => {
+  if (!locationId) {
+    return null;
+  }
+
   const { data, error } = await supabase
     .from("locations")
     .select("*")
@@ -122,12 +126,19 @@ export async function fetchProspects(startDate?: Date, endDate?: Date) {
     // Map the data to our Prospect type
     const prospectsList = await Promise.all(
       prospects.map(async (prospect) => {
-        const location = await fetchLocationById(prospect.location_id);
+        let locationName = "Bastos"; // Default location
+        if (prospect.location_id) {
+          const location = await fetchLocationById(prospect.location_id);
+          if (location) {
+            locationName = location.name;
+          }
+        }
+        
         return {
           id: prospect.id,
           name: prospect.name ?? "",
           phone: prospect.phone,
-          location: location?.name ?? "Bastos",
+          location: locationName,
           location_id: prospect.location_id,
           address: prospect.address ?? "",
           datetime: prospect.datetime,

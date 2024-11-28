@@ -11,8 +11,7 @@ import { ProspectsSidebar } from './components/Calendar/ProspectsSidebar';
 import { RemindersPane } from './components/Calendar/RemindersPane';
 import { ProspectModal } from './components/Calendar/ProspectModal';
 import { fetchProspects, createProspect, deleteProspect, updateReminder, updateProspect } from './lib/api';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { Toaster } from './components/ui/toaster';
 import './styles/toast.css';
 import { v4 as uuidv4 } from 'uuid';
 import Team from './pages/Team';
@@ -578,20 +577,7 @@ export default function App() {
             </div>
           )}
 
-          <ToastContainer
-            position="bottom-center"
-            autoClose={5000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme="dark"
-            className="toast-container"
-            toastClassName="dark-toast"
-          />
+          <Toaster />
         </div>
       </BrowserRouter>
     </QueryClientProvider>

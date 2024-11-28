@@ -32,13 +32,13 @@ const priorityColors = {
 export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateReminder }: ProspectModalProps) {
   const [showEditModal, setShowEditModal] = React.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
-  const [currentProspect, setCurrentProspect] = useState<Prospect>(prospect);
-  const [reminders, setReminders] = React.useState<Reminder[]>(prospect.reminders || []);
+  const [currentProspect, setCurrentProspect] = useState<Prospect>(prospect ?? {} as Prospect);
+  const [reminders, setReminders] = React.useState<Reminder[]>(prospect?.reminders ?? []);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [showPhoneMenu, setShowPhoneMenu] = React.useState(false);
   const phoneMenuRef = React.useRef<HTMLDivElement>(null);
-  const [localServices, setLocalServices] = React.useState(prospect.services);
+  const [localServices, setLocalServices] = React.useState(prospect?.services ?? []);
   const [hasChanges, setHasChanges] = React.useState(false);
 
   // Add state for status and priority dropdowns
@@ -444,39 +444,33 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
 
   // Subscribe to realtime updates for this specific prospect
   React.useEffect(() => {
-    const channelId = `prospect-${prospect.id}`;
     let isMounted = true;
+    const channelId = `prospect-${prospect?.id}`;
 
     const refreshProspect = async () => {
-      if (!isMounted) return;
-      
+      if (!prospect?.id) return;
       try {
+        setIsLoading(true);
         const updatedProspect = await fetchProspectById(prospect.id);
-        
-        if (!isMounted) return;
-        
-        if (updatedProspect) {
+        if (updatedProspect && isMounted) {
           setCurrentProspect(updatedProspect);
           setReminders(updatedProspect.reminders || []);
           setLocalServices(updatedProspect.services || []);
-        } else {
-          // If prospect no longer exists, close the modal
-          onClose();
         }
-      } catch (error) {
-        console.error('Error refreshing prospect:', error);
+      } catch (err) {
         if (isMounted) {
           setError('Failed to refresh prospect data');
         }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
-    
-    // Initial refresh
-    refreshProspect();
-    
+
     realtimeManager.subscribe(channelId, {
       onProspectChange: async (payload) => {
-        if (!isMounted) return;
+        if (!isMounted || !prospect?.id) return;
         
         if (payload.eventType === 'DELETE' || !payload.new) {
           onClose();
@@ -488,7 +482,7 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
         }
       },
       onReminderChange: async (payload) => {
-        if (!isMounted) return;
+        if (!isMounted || !prospect?.id) return;
         
         const isRelevant = 
           (payload.new?.prospect_id === prospect.id) || 
@@ -499,7 +493,7 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
         }
       },
       onServiceChange: async (payload) => {
-        if (!isMounted) return;
+        if (!isMounted || !prospect?.id) return;
         
         const isRelevant = 
           (payload.new?.prospect_id === prospect.id) || 
@@ -515,7 +509,7 @@ export function ProspectModal({ prospect, onClose, onEdit, onDelete, onUpdateRem
       isMounted = false;
       realtimeManager.unsubscribe(channelId);
     };
-  }, [prospect.id]);
+  }, [prospect?.id]);
 
   if (error) {
     return (
